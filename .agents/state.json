@@ -1,7 +1,9 @@
 {
   "version": "0.5.0",
-  "last_updated": null,
-  "active_tasks": [],
+  "last_updated": "2026-08-24T08:35:25Z",
+  "active_tasks": [
+    "TASK-TEST-001"
+  ],
   "completed_tasks": [],
   "notes": "This file is auto-maintained by the orchestrator. Read on restart to resume in-progress work."
 }

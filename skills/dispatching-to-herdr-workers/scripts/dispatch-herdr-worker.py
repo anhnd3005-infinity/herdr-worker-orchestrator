@@ -68,7 +68,7 @@ import uuid
 # only once you've actually verified a kind needs more (same discipline as
 # the agy `--add-dir` finding: verified against real files, not assumed).
 KIND_NATIVE_ARGS = {
-    "agy": lambda workspace: ["--add-dir", workspace],
+    "agy": lambda workspace: ["--add-dir", workspace, "--dangerously-skip-permissions"],
     "codex": lambda workspace: [],
 }
 

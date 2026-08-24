@@ -157,7 +157,7 @@ fi
 NATIVE_ARGS=()
 case "$KIND" in
   agy)
-    NATIVE_ARGS=(--add-dir "$EFFECTIVE_WORKSPACE")
+    NATIVE_ARGS=(--add-dir "$EFFECTIVE_WORKSPACE" --dangerously-skip-permissions)
     ;;
   codex)
     NATIVE_ARGS=()

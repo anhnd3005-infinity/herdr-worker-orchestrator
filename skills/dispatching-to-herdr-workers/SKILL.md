@@ -86,7 +86,7 @@ native args to pass at `herdr agent start ... -- <native-args>` time:
 
 | Kind    | Extra native args                | Why |
 |---------|-----------------------------------|-----|
-| `agy`   | `--add-dir <absolute-workspace>`  | agy does **not** reliably use its launching cwd as its workspace — without this it may silently write into its own `~/.gemini/antigravity-cli/scratch/` while still reporting success. Verified empirically (2026-08-10). |
+| `agy`   | `--add-dir <absolute-workspace>` `--dangerously-skip-permissions` | agy does **not** reliably use its launching cwd as its workspace — without `--add-dir` it may silently write into its own `~/.gemini/antigravity-cli/scratch/` while still reporting success. Verified empirically (2026-08-10). Without `--dangerously-skip-permissions`, agy blocks on every file creation and command execution with an approval prompt, causing the dispatch to appear `idle` when it's actually waiting for user input — the orchestrator can't distinguish this from a genuine idle state without reading the pane transcript. Verified empirically (2026-08-24). |
 | `codex` | *(none)*                          | No such quirk found so far — `pane split --cwd` alone has been sufficient in testing. |
 | *(any other kind)* | *(none, default)*     | Untested. If a kind silently writes to the wrong place or otherwise misbehaves, verify against real files first, then add a table entry — same discipline that caught the agy quirk. Never add an entry on assumption alone. |
 
@@ -655,6 +655,25 @@ it every session.
   - **`agent_prompt_stalled` = UNKNOWN** framing made explicit: not FAIL,
     requires inspect-then-decide flow. Scripts already implemented this
     correctly; documentation now matches.
+- **2026-08-24, live dispatch test caught agy approval blocking (agy):**
+  dispatched a "create hello.py and run it" task. Agy received the prompt
+  (marker visible in transcript, retry on attempt 1 `agent_prompt_stalled`
+  succeeded on attempt 2), created the file correctly, but then **blocked
+  on an approval prompt** ("Allow creation of this file?") while Herdr
+  reported `agent_status: idle` — not `blocked`. After manual
+  `herdr agent send-keys enter`, agy created the file, then blocked again
+  on "Do you want to proceed?" for running `python3 hello.py`. The file
+  content and execution were both correct. Fix: added
+  `--dangerously-skip-permissions` to the `KIND_NATIVE_ARGS` table for
+  `agy`, so the worker doesn't block on approval prompts during automated
+  dispatch. This is the same flag the headless era used, now needed in
+  pane mode too — the Herdr pane gives agy a real TTY, which makes it
+  show interactive approval prompts that a headless `--print` mode
+  wouldn't have. Lesson: **Herdr reporting `idle` does not mean the agent
+  has nothing pending** — it can be visually blocked on an interactive
+  prompt that Herdr's lifecycle polling doesn't detect as `blocked`.
+  Always `herdr agent read` to distinguish "genuinely idle" from "waiting
+  for user input in a way Herdr can't see."
 
 ## Confidence notes (as of 2026-08-24)
 

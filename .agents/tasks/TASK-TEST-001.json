@@ -1,0 +1,24 @@
+{
+  "id": "TASK-TEST-001",
+  "status": "passed",
+  "worker_kind": "agy",
+  "worker_name": "worker_agy_test",
+  "workspace": "/Users/ducanh/Project/Infinity/agy-orchestrator-demo/workspace_test",
+  "pane_id": "w1X:p2",
+  "agent_name": "worker_agy_test",
+  "attempt": 1,
+  "max_attempts": 3,
+  "isolation": "none",
+  "worktree_path": null,
+  "worktree_branch": null,
+  "started_at": "2026-08-24T08:35:25Z",
+  "updated_at": "2026-08-24T08:35:25Z",
+  "prompt": "Tạo file hello.py in ra 'Hello from herdr-worker-orchestrator v0.5.0!' rồi chạy thử",
+  "verification": {
+    "files_exist": "pending",
+    "tests": "pending",
+    "build": "pending",
+    "review": "pending"
+  },
+  "error": null
+}
