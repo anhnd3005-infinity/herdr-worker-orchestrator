@@ -39,6 +39,6 @@ description = "Read .agents/state.json, inspect Herdr agents for in-progress tas
 # ─── Events ─────────────────────────────────────────────────────────
 
 [[events]]
-on = "agent.status_changed"
+on = "pane.agent_status_changed"
 command = ["python3", "scripts/herdr-on-agent-status.py"]
 description = "Auto-update task state when a worker agent's status changes (idle/working/blocked/done)."
