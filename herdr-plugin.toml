@@ -1,0 +1,44 @@
+id = "herdr-worker-orchestrator"
+name = "Herdr Worker Orchestrator"
+version = "0.5.0"
+min_herdr_version = "0.7.0"
+description = "Dispatch tasks to CLI agent workers (agy, codex, ...) via Herdr-managed panes with stateful task tracking, git worktree isolation, and diff-based review."
+platforms = ["linux", "macos", "windows"]
+
+# ─── Actions ────────────────────────────────────────────────────────
+
+[[actions]]
+id = "dispatch"
+title = "Dispatch task to worker"
+contexts = ["workspace"]
+command = ["python3", "skills/dispatching-to-herdr-workers/scripts/dispatch-herdr-worker.py"]
+description = "Split a pane, start a CLI agent worker, and send it a task prompt. Writes task state to .agents/"
+
+[[actions]]
+id = "dispatch-bash"
+title = "Dispatch task to worker (bash)"
+contexts = ["workspace"]
+command = ["bash", "skills/dispatching-to-herdr-workers/scripts/dispatch-herdr-worker.sh"]
+platforms = ["linux", "macos"]
+description = "Same as dispatch but uses the bash script variant (macOS/Linux only)."
+
+[[actions]]
+id = "status"
+title = "Show orchestrator status"
+contexts = ["workspace"]
+command = ["python3", "scripts/herdr-status.py"]
+description = "Show active tasks, worker states, and pending verifications from .agents/state.json"
+
+[[actions]]
+id = "resume"
+title = "Resume after restart"
+contexts = ["workspace"]
+command = ["python3", "scripts/herdr-resume.py"]
+description = "Read .agents/state.json, inspect Herdr agents for in-progress tasks, and report what needs attention."
+
+# ─── Events ─────────────────────────────────────────────────────────
+
+[[events]]
+on = "agent.status_changed"
+command = ["python3", "scripts/herdr-on-agent-status.py"]
+description = "Auto-update task state when a worker agent's status changes (idle/working/blocked/done)."

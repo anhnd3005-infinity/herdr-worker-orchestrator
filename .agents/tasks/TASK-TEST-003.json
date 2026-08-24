@@ -1,0 +1,24 @@
+{
+  "id": "TASK-TEST-003",
+  "status": "passed",
+  "worker_kind": "agy",
+  "worker_name": "worker_agy_test3",
+  "workspace": "/Users/ducanh/Project/Infinity/agy-orchestrator-demo/workspace_test",
+  "pane_id": "w1X:p5",
+  "agent_name": "worker_agy_test3",
+  "attempt": 1,
+  "max_attempts": 3,
+  "isolation": "none",
+  "worktree_path": null,
+  "worktree_branch": null,
+  "started_at": "2026-08-24T09:02:57Z",
+  "updated_at": "2026-08-24T09:02:57Z",
+  "prompt": "Tạo file greet.py với function greet(name) in ra 'Xin chào {name} từ herdr-worker-orchestrator!', rồi chạy python3 -c 'from greet import greet; greet(\"Duc Anh\")'",
+  "verification": {
+    "files_exist": "pending",
+    "tests": "pending",
+    "build": "pending",
+    "review": "pending"
+  },
+  "error": null
+}
