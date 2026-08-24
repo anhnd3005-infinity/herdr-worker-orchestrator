@@ -88,12 +88,12 @@ You can install this plugin in **Claude Code**, natively in **Herdr**, or **both
 #### Option A: In Claude Code (Agent Skill / Plugin)
 
 ```
-/plugin marketplace add https://github.com/anhnd3005-infinity/claude-agy-orchestrator.git
+/plugin marketplace add https://github.com/anhnd3005-infinity/herdr-worker-orchestrator.git
 /plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
 ```
 
 Repo is **public** — no SSH key, no GitHub login needed. (SSH also works if
-preferred: `git@github.com:anhnd3005-infinity/claude-agy-orchestrator.git`.)
+preferred: `git@github.com:anhnd3005-infinity/herdr-worker-orchestrator.git`.)
 
 ✅ **Verify in Claude Code:**
 ```
@@ -106,12 +106,12 @@ Works from **any** project on the machine, not just this repo.
 
 Install straight from GitHub:
 ```bash
-herdr plugin install anhnd3005-infinity/claude-agy-orchestrator
+herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator
 ```
 
 Or link locally for development / local usage:
 ```bash
-herdr plugin link /path/to/claude-agy-orchestrator
+herdr plugin link /path/to/herdr-worker-orchestrator
 ```
 
 ✅ **Verify in Herdr:**
@@ -131,7 +131,7 @@ herdr plugin action list --plugin herdr-worker-orchestrator
 **For Herdr:**
 ```bash
 # If installed from GitHub:
-herdr plugin install anhnd3005-infinity/claude-agy-orchestrator --force
+herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator --force
 # If linked locally: git pull is enough
 ```
 
