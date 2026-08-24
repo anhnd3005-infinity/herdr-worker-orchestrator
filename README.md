@@ -1,13 +1,25 @@
-# agy-orchestrator
+# herdr-worker-orchestrator
 
 Claude Code as orchestrator, CLI agent workers of any
 [Herdr](https://herdr.dev)-supported kind (`agy`, `codex`, and in principle
 any other kind Herdr recognizes) running interactively inside
-Herdr-managed panes — coordinated through a file-based `.agents/` ledger.
-Claude clarifies scope before dispatching, always self-checks a worker's
-output directly against real files (never trusts a status code alone), and
-only spins up an independent reviewer for tasks that meet a stated
-importance bar.
+Herdr-managed panes — coordinated through a **stateful** `.agents/` ledger
+with task tracking, worker isolation via `git worktree`, and diff-based
+review. Claude clarifies scope before dispatching, always self-checks a
+worker's output directly against real files (never trusts a status code
+alone), and only spins up an independent reviewer for tasks that meet a
+stated importance bar.
+
+```
+Claude (orchestrator)
+   ↓
+Herdr (pane/agent layer)
+   ↓
+Worker (isolated or shared)
+ ├── agy
+ ├── codex
+ └── ... (any Herdr-supported kind)
+```
 
 ## Requirements
 
@@ -73,7 +85,7 @@ plugin.
 
 ```
 /plugin marketplace add https://github.com/anhnd3005-infinity/claude-agy-orchestrator.git
-/plugin install agy-orchestrator@agy-orchestrator-marketplace
+/plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
 ```
 
 Repo is **public** — no SSH key, no GitHub login needed. (SSH also works if
@@ -83,7 +95,7 @@ preferred: `git@github.com:anhnd3005-infinity/claude-agy-orchestrator.git`.)
 ```
 /plugin
 ```
-should list `agy-orchestrator@agy-orchestrator-marketplace` as enabled.
+should list `herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace` as enabled.
 Works from **any** project on the machine, not just this repo.
 
 ### Updating later
@@ -94,14 +106,14 @@ two commands:
 
 ```
 /plugin marketplace update
-/plugin update agy-orchestrator@agy-orchestrator-marketplace
+/plugin update herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
 ```
 
 The first refreshes the marketplace catalog from git (pulls latest
 commits); the second actually installs the new version — running only the
 first does not update the plugin itself. From a plain terminal instead of
 an interactive session (e.g. scripting/CI), use `claude plugin update
-agy-orchestrator@agy-orchestrator-marketplace -y` (the `-y` skips the
+herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace -y` (the `-y` skips the
 confirmation prompt; it's required outside an interactive session, ignored
 inside one). There's no "update all" — update by plugin name.
 
@@ -157,6 +169,46 @@ you want that detail.)*
    integration surface the first time you use it — treat its first
    dispatch like a new task type, not a known quantity.
 
+## State machine & resume
+
+v0.5.0 introduces a **stateful task ledger** in `.agents/`. Each dispatched
+task gets a JSON file in `.agents/tasks/` with a well-defined status
+lifecycle:
+
+```
+pending → dispatching → working → verifying → passed
+                ↓           ↓         ↓
+              failed     blocked    failed
+                           ↓
+                        resolved → verifying → ...
+```
+
+If Claude restarts mid-orchestration, it reads `.agents/state.json` and
+the task files to find any `working`/`dispatching`/`blocked` tasks, inspects
+their Herdr agents, and resumes — no state is lost to compaction or
+session restart.
+
+See `SKILL.md` § "State Machine & Resume" for the full schema and flow.
+
+## Worker isolation
+
+By default, workers run in the same working directory as Claude. For tasks
+that touch shared/production code, v0.5.0 adds **git worktree isolation**:
+
+```
+Project
+├── main worktree        ← Claude works here
+├── .worktrees/TASK-001  ← Worker 1 (isolated)
+└── .worktrees/TASK-002  ← Worker 2 (isolated)
+```
+
+Enable with `--isolation worktree` on the dispatch scripts. The worker gets
+its own branch, and after verification the orchestrator merges the diff
+back. This makes parallel dispatch safe and prevents workers from
+accidentally breaking Claude's working tree.
+
+See `SKILL.md` § "Worker Isolation" for the full flow.
+
 ## Known gotchas
 
 - **No Herdr session → nothing works.** `HERDR_ENV` must be `1`. There is
@@ -172,6 +224,26 @@ you want that detail.)*
   `pane split`/`agent start` even when nothing is actually wrong — both
   scripts retry, and cross-check the real pane transcript before trusting
   any status. Don't hand-roll the `herdr` sequence without one of them.
+- **`agent_prompt_stalled` is UNKNOWN, not FAIL.** This status means the
+  prompt *may or may not* have been delivered — it's a heuristic, not a
+  reliable signal. The correct handling is:
+  ```
+  agent_prompt_stalled
+         ↓
+      UNKNOWN
+         ↓
+    herdr agent get + herdr agent read
+         ↓
+    inspect transcript for prompt text
+       /       \
+     YES       NO
+      │         │
+    WAIT      RETRY
+    (task      (prompt never
+    started)   delivered)
+  ```
+  The dispatch scripts already implement this flow (retry + marker check).
+  Never short-circuit to FAIL on `agent_prompt_stalled` alone.
 - **`done` is not safer to trust than `idle`.** Both are "settled" states
   and both have independently produced a false-positive (settled + zero
   error + completely empty pane). The delivery-marker check covers both.
@@ -185,6 +257,11 @@ you want that detail.)*
   substrings.
 - **A worker doing exactly what it was told can still overshoot intent.**
   That's a step-0 (clarify first) problem, not a step-4 (self-check) one.
+- **Reviewers must review the diff, not the worker's report.** A worker
+  can report success while having produced wrong output, or can accurately
+  describe what it did while having done the wrong thing. The reviewer's
+  job is `git diff` + actual file inspection + tests/build — never just
+  re-reading the worker's `progress.md`.
 
 Full history and exact repro steps for each of these: `skills/
 dispatching-to-herdr-workers/SKILL.md`'s "Lessons from real dispatches" log.
@@ -192,13 +269,13 @@ dispatching-to-herdr-workers/SKILL.md`'s "Lessons from real dispatches" log.
 ## What's in here
 
 - `skills/dispatching-to-herdr-workers/` — the skill: `SKILL.md` (process,
-  per-kind quirks table, review policy, full lessons log) +
-  `scripts/dispatch-herdr-worker.sh` / `.py` (behavior-identical dispatch
-  wrappers, bash and pure-Python).
+  per-kind quirks table, review policy, state machine, isolation, full
+  lessons log) + `scripts/dispatch-herdr-worker.sh` / `.py`
+  (behavior-identical dispatch wrappers, bash and pure-Python).
 - `commands/herdr-dispatch.md` — `/herdr-dispatch <task>`, forces the skill
   instead of relying on auto-match.
-- `.agents/`, `workspace/`, `workspace2/` — a real worked-example dispatch,
-  kept for reference (see Worked examples below).
+- `.agents/` — stateful task ledger (tasks/, runs/, state.json) plus a
+  real worked-example dispatch kept for reference.
 
 ## Why this exists
 
@@ -257,6 +334,13 @@ learned.
 
 ## Version history
 
+- **0.5.0** — renamed from `agy-orchestrator` to `herdr-worker-orchestrator`
+  to reflect the real architecture (Claude → Herdr → any worker kind);
+  stateful `.agents/` ledger with task JSON files and resume-on-restart;
+  `git worktree` isolation mode for safe parallel dispatch; enforced
+  diff-based review (reviewer inspects `git diff` + actual files, never
+  trusts worker report); explicit `agent_prompt_stalled` = UNKNOWN framing
+  with inspect-then-decide flow.
 - **0.4.1** — doc-driven optimization pass (see Worked example 4): timeout
   bounds validation + new `working` exit code (`3`), `--wait`-dropping
   tested and rejected, new `timeout` error documented, `idle`-only

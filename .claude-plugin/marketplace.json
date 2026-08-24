@@ -1,15 +1,15 @@
 {
-  "name": "agy-orchestrator-marketplace",
-  "description": "Self-hosted marketplace for the agy-orchestrator plugin (Claude Code orchestrator + agy CLI worker pattern).",
+  "name": "herdr-worker-orchestrator-marketplace",
+  "description": "Self-hosted marketplace for the herdr-worker-orchestrator plugin (Claude Code orchestrator + Herdr-managed CLI worker pattern).",
   "owner": {
     "name": "Duc Anh",
     "email": "anhnd3005@infinitytech.global"
   },
   "plugins": [
     {
-      "name": "agy-orchestrator",
-      "description": "Claude Code as orchestrator, CLI agent workers of any Herdr-supported kind (agy, codex, ...) running in Herdr-managed panes, coordinated via a file-based .agents/ ledger.",
-      "version": "0.4.1",
+      "name": "herdr-worker-orchestrator",
+      "description": "Claude Code as orchestrator, CLI agent workers of any Herdr-supported kind (agy, codex, ...) running in Herdr-managed panes, coordinated via a stateful .agents/ ledger with task tracking, worker isolation, and diff-based review.",
+      "version": "0.5.0",
       "source": "./",
       "author": {
         "name": "Duc Anh",

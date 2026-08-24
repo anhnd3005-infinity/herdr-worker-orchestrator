@@ -9,7 +9,7 @@ $ARGUMENTS
 
 ## Your job
 
-Use the **`dispatching-to-herdr-workers`** skill (from the `agy-orchestrator`
+Use the **`dispatching-to-herdr-workers`** skill (from the `herdr-worker-orchestrator`
 plugin) for the task above — do not skip straight to doing it yourself, and
 do not silently fall back to a native Claude subagent instead of dispatching
 to a worker. This skill requires a live Herdr session; check

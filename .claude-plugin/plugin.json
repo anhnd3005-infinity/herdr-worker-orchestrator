@@ -1,7 +1,7 @@
 {
-  "name": "agy-orchestrator",
-  "description": "Claude Code as orchestrator, CLI agent workers of any Herdr-supported kind (agy, codex, ...) running in Herdr-managed panes, coordinated via a file-based .agents/ ledger.",
-  "version": "0.4.1",
+  "name": "herdr-worker-orchestrator",
+  "description": "Claude Code as orchestrator, CLI agent workers of any Herdr-supported kind (agy, codex, ...) running in Herdr-managed panes, coordinated via a stateful .agents/ ledger with task tracking, worker isolation, and diff-based review.",
+  "version": "0.5.0",
   "author": {
     "name": "Duc Anh",
     "email": "anhnd3005@infinitytech.global"
@@ -9,9 +9,11 @@
   "license": "MIT",
   "keywords": [
     "orchestration",
-    "subagents",
+    "herdr",
+    "multi-agent",
+    "worker-isolation",
+    "state-machine",
     "agy",
-    "antigravity",
-    "multi-agent"
+    "codex"
   ]
 }

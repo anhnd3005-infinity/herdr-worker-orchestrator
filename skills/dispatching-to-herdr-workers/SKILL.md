@@ -1,6 +1,6 @@
 ---
 name: dispatching-to-herdr-workers
-description: Use when you want Claude Code to act as orchestrator and dispatch execution tasks to CLI agent workers (agy, codex, or any other Herdr-supported kind) running in persistent Herdr-managed panes, coordinated through a file-based .agents/ ledger.
+description: Use when you want Claude Code to act as orchestrator and dispatch execution tasks to CLI agent workers (agy, codex, or any other Herdr-supported kind) running in persistent Herdr-managed panes, coordinated through a stateful .agents/ ledger with task tracking, worker isolation, and diff-based review.
 ---
 
 # Dispatching to Herdr Workers
@@ -20,10 +20,13 @@ reviewer for every trivial task is pure overhead, not safety.
 This skill was born as `dispatching-to-agy-workers` (agy-only, headless
 `agy --print`). It was renamed and generalized (2026-08-13) once the Herdr
 pane approach proved out for agy and the need showed up to drive other kinds
-(starting with `codex`) through the exact same ledger/process. Read the
-Lessons log below — it carries the real, verified-by-testing history of
-both the headless→Herdr migration and the agy→multi-kind generalization;
-don't re-derive what's already there.
+(starting with `codex`) through the exact same ledger/process. v0.5.0
+(2026-08-24) renamed the plugin from `agy-orchestrator` to
+`herdr-worker-orchestrator` and added stateful task tracking, worker
+isolation via `git worktree`, diff-based review enforcement, and explicit
+`agent_prompt_stalled` = UNKNOWN framing. Read the Lessons log below — it
+carries the real, verified-by-testing history; don't re-derive what's
+already there.
 
 This is a different shape than `superpowers:dispatching-parallel-agents` or
 `superpowers:subagent-driven-development`: those dispatch *native,
@@ -101,6 +104,142 @@ hand-roll the `herdr` invocation sequence without one of them, except when
 resolving a `blocked` worker (see step 2b — that part is inherently
 interactive and not scriptable).
 
+## State Machine & Resume (v0.5.0)
+
+### Task lifecycle
+
+Every dispatched task gets a JSON file in `.agents/tasks/` with a
+well-defined status lifecycle:
+
+```
+pending → dispatching → working → verifying → passed
+                ↓           ↓         ↓
+              failed     blocked    failed
+                           ↓
+                        resolved → verifying → ...
+```
+
+### Task JSON schema
+
+```json
+{
+  "id": "TASK-001",
+  "status": "pending|dispatching|working|blocked|verifying|passed|failed",
+  "worker_kind": "agy",
+  "worker_name": "worker_agy_1",
+  "workspace": "/abs/path",
+  "pane_id": "w1H:p1",
+  "agent_name": "worker_agy_1",
+  "attempt": 1,
+  "max_attempts": 3,
+  "isolation": "none|worktree",
+  "worktree_path": null,
+  "worktree_branch": null,
+  "started_at": "2026-08-24T00:00:00Z",
+  "updated_at": "2026-08-24T00:00:00Z",
+  "prompt": "task description...",
+  "verification": {
+    "files_exist": "pending|pass|fail",
+    "tests": "pending|pass|fail|skipped",
+    "build": "pending|pass|fail|skipped",
+    "review": "pending|pass|fail|skipped"
+  },
+  "error": null
+}
+```
+
+### Global state
+
+`.agents/state.json` tracks which tasks are active and completed:
+
+```json
+{
+  "version": "0.5.0",
+  "last_updated": "2026-08-24T00:00:00Z",
+  "active_tasks": ["TASK-001", "TASK-002"],
+  "completed_tasks": ["TASK-000"],
+  "notes": "Auto-maintained by the orchestrator."
+}
+```
+
+### Resume on restart
+
+When Claude restarts (compaction, session restart, different machine):
+
+```
+Claude restart
+     ↓
+read .agents/state.json
+     ↓
+for each task in active_tasks:
+     ↓
+  read .agents/tasks/TASK-xxx.json
+     ↓
+  herdr agent get <agent_name>
+     ↓
+  actual status?
+   /    |      \
+idle  working  blocked
+  ↓      ↓       ↓
+verify  wait   resolve
+```
+
+The dispatch scripts auto-write task JSON when `--task-id TASK-xxx` is
+passed. If no task ID is given, the old behavior (DISPATCH.md +
+progress.md only) is preserved for backward compatibility.
+
+## Worker Isolation (v0.5.0)
+
+### Why
+
+Workers running in the same working directory as Claude can conflict:
+- A `refactor authentication` task could break files Claude is actively
+  reading or editing.
+- Parallel dispatch is impossible when both workers write to the same tree.
+- No clean diff boundary — hard to tell what the worker changed vs what
+  was already there.
+
+### Isolation modes
+
+| Mode | Flag | Description |
+|------|------|-------------|
+| `none` (default) | `--isolation none` | Same cwd, same as v0.4.x. Fine for simple, single tasks. |
+| `worktree` | `--isolation worktree` | Creates a `git worktree` at `.worktrees/<task-id>` on a dedicated branch. Worker's changes are fully isolated. |
+
+### Worktree flow
+
+```
+1. git worktree add .worktrees/TASK-001 HEAD
+   (creates isolated copy on branch task/TASK-001)
+
+2. herdr pane split --cwd .worktrees/TASK-001
+   (worker runs in the worktree, not the main tree)
+
+3. Worker executes task in complete isolation
+
+4. Orchestrator self-check:
+   cd .worktrees/TASK-001 && git diff HEAD
+   (see exactly what the worker changed)
+
+5. If PASS:
+   git checkout main
+   git merge task/TASK-001
+   (or cherry-pick specific commits)
+
+6. Cleanup:
+   git worktree remove .worktrees/TASK-001
+   git branch -d task/TASK-001
+```
+
+### When to use worktree isolation
+
+- Task touches shared/production code
+- Parallel dispatch (multiple workers at once)
+- Task is flagged as "important"/"quan trọng"
+- Refactoring or any change with blast radius > 1 file
+
+For scratch/exploratory work, `none` is fine.
+
 ## The `.agents/` ledger convention
 
 Same convention this project's own `senior_product_designer_agent` uses and
@@ -109,6 +248,11 @@ compaction, session restart, or a different machine picking up the work):
 
 ```
 .agents/
+├── state.json               # global orchestrator state (v0.5.0)
+├── tasks/                   # task state machine files (v0.5.0)
+│   └── TASK-xxx.json
+├── runs/                    # execution logs (v0.5.0)
+│   └── RUN-xxx.json
 ├── ORIGINAL_REQUEST.md      # the goal, written once by the orchestrator
 ├── orchestrator/
 │   ├── plan.md              # orchestrator's running plan/summary
@@ -132,8 +276,9 @@ compaction, session restart, or a different machine picking up the work):
     └── handoff.md           # reviewer writes: ends with "VERDICT: PASS/FAIL"
 ```
 
-Real product files go in a sibling `workspace/` dir, never inside `.agents/`
-— `.agents/` is dispatch bookkeeping only.
+Real product files go in a sibling `workspace/` dir (or a worktree under
+`.worktrees/`), never inside `.agents/` — `.agents/` is dispatch
+bookkeeping only.
 
 ## The Process
 
@@ -162,7 +307,9 @@ Real product files go in a sibling `workspace/` dir, never inside `.agents/`
      "<task prompt>" \
      <agent_name> \
      <kind> \
-     [timeout_ms, default 300000]
+     [timeout_ms, default 300000] \
+     [--isolation none|worktree] \
+     [--task-id TASK-xxx]
    ```
    Windows (native cmd/PowerShell, no bash needed) or wherever Python is
    preferred — same arguments, same output files:
@@ -173,19 +320,23 @@ Real product files go in a sibling `workspace/` dir, never inside `.agents/`
      "<task prompt>" \
      <agent_name> \
      <kind> \
-     [timeout_ms, default 300000]
+     [timeout_ms, default 300000] \
+     [--isolation none|worktree] \
+     [--task-id TASK-xxx]
    ```
-   Under the hood this runs, in order: `herdr pane split --current
-   --direction right --cwd <workspace> --no-focus`, then `herdr agent start
-   <agent_name> --kind <kind> --pane <pane_id> -- <per-kind native args>`,
-   then `herdr agent prompt <agent_name> "<task, workspace path repeated>"
-   --wait --timeout <timeout_ms>`, then `herdr agent get` + `herdr agent
-   read` to capture the settled status and terminal output — with the
-   delivery-confirmation check from the Lessons log applied before trusting
-   any of it. It writes `DISPATCH.md`, `progress.md`, the raw `herdr_*.json`
-   responses, and `agent_output.txt`. Exit code: `0` = settled idle/done,
-   `2` = settled blocked, `1` = no delivery confirmed / unknown / error —
-   check the exit code, don't just assume success.
+   Under the hood this runs, in order: (optionally) `git worktree add` for
+   isolation, then `herdr pane split --current --direction right --cwd
+   <workspace> --no-focus`, then `herdr agent start <agent_name> --kind
+   <kind> --pane <pane_id> -- <per-kind native args>`, then `herdr agent
+   prompt <agent_name> "<task, workspace path repeated>" --wait --timeout
+   <timeout_ms>`, then `herdr agent get` + `herdr agent read` to capture
+   the settled status and terminal output — with the delivery-confirmation
+   check from the Lessons log applied before trusting any of it. It writes
+   `DISPATCH.md`, `progress.md`, the raw `herdr_*.json` responses,
+   `agent_output.txt`, and (if `--task-id` given) a task JSON file. Exit
+   code: `0` = settled idle/done, `2` = settled blocked, `1` = no delivery
+   confirmed / unknown / error, `3` = still working past timeout — check
+   the exit code, don't just assume success.
 
    2b. **If the worker comes back `blocked`** (a question, an approval
    request, etc.), the script has already stopped — it will not resolve
@@ -210,8 +361,9 @@ Real product files go in a sibling `workspace/` dir, never inside `.agents/`
    past the banner, it really didn't land — retry manually via
    `herdr agent prompt`.
 3. **Never dispatch two workers at the same absolute workspace path
-   concurrently** — same reasoning as never running two implementers on the
-   same files in `subagent-driven-development`: conflicting writes, no lock.
+   concurrently** (unless using worktree isolation — that's precisely what
+   it's for). Same reasoning as never running two implementers on the same
+   files in `subagent-driven-development`: conflicting writes, no lock.
    Also never reuse a live agent name — check `herdr agent list` first.
 4. **Self-check — always, no exceptions, but cheap.** Before writing
    `handoff.md`, YOU (the orchestrator) directly inspect what the worker
@@ -220,6 +372,11 @@ Real product files go in a sibling `workspace/` dir, never inside `.agents/`
    it has reported success even when the file landed in the wrong directory
    entirely, or was never actually created (see the Lessons log — twice).
    This step is not optional and does not need a subagent.
+
+   **For worktree-isolated tasks:** `cd .worktrees/TASK-xxx && git diff HEAD`
+   gives you a clean view of exactly what the worker changed. This is
+   strictly better than inspecting individual files — you see every change,
+   every new file, nothing hidden.
 5. **Independent reviewer subagent — only for tasks that meet the bar.**
    Dispatch a Claude subagent (Agent tool) with a `reviewer_N/BRIEFING.md`
    when **any** of these are true:
@@ -244,19 +401,84 @@ Real product files go in a sibling `workspace/` dir, never inside `.agents/`
    Don't let "it worked last time" quietly become the excuse to stop
    self-checking too — step 4 never goes away, only step 5 is conditional.
 
+   **Reviewer MUST review the diff, not the worker report (enforced).**
+   A worker can report success while having produced wrong output, or can
+   accurately describe what it did while having done the wrong thing. The
+   reviewer's BRIEFING.md must include these instructions:
+
+   ```
+   ## Review instructions (ENFORCED)
+
+   1. ❌ DO NOT read or trust the worker's progress.md or self-report.
+   2. ✅ Run `git diff` to see actual changes (or for worktree-isolated
+      tasks: `cd .worktrees/TASK-xxx && git diff HEAD`).
+   3. ✅ `cat`/inspect the actual changed files.
+   4. ✅ Run tests if they exist for the changed code.
+   5. ✅ Run build if applicable.
+   6. ✅ VERDICT must be based on evidence from steps 2-5 only.
+
+   Your VERDICT: PASS or FAIL must end your handoff.md, with a
+   one-sentence reason citing specific evidence.
+   ```
+
    When used: the reviewer independently inspects the actual workspace
    files and re-runs/re-checks the claim itself — never just re-parses the
-   herdr JSON responses. Its `handoff.md` must end with `VERDICT: PASS` or
-   `VERDICT: FAIL` plus a one-sentence reason.
+   herdr JSON responses or the worker's progress.md. Its `handoff.md` must
+   end with `VERDICT: PASS` or `VERDICT: FAIL` plus a one-sentence reason
+   **citing specific evidence** (file path, diff line, test output).
 6. **Gate.** Update `.agents/orchestrator/GATE_STATUS.md` for every worker
    (self-check result, and reviewer verdict if one was dispatched — write
-   `reviewer: skipped (self-checked)` when step 5 didn't apply). Only
+   `reviewer: skipped (self-checked)` when step 5 didn't apply). Also
+   update the task JSON status if using task tracking (`--task-id`). Only
    report the task done to the human once this line is clean.
 7. **Cleanup.** You created the worker's pane, so you may close it
    (`herdr pane close <pane_id>`) once its `handoff.md` is written and no
    follow-up is expected — but leaving it alive costs nothing and preserves
    the ability to send one more prompt if review turns up a gap. Never
    close a pane or kill an agent you did not create.
+
+   **For worktree-isolated tasks:** after merge, clean up with:
+   ```bash
+   git worktree remove .worktrees/TASK-xxx
+   git branch -d task/TASK-xxx
+   ```
+
+## `agent_prompt_stalled` is UNKNOWN, not FAIL (v0.5.0)
+
+This is critical enough to call out separately from the Lessons log.
+
+`agent_prompt_stalled` is a Herdr heuristic that means "I didn't see the
+agent's state change within the timeout." It does **NOT** reliably mean
+the prompt was never delivered. Empirically (2026-08-13 smoke test), it has
+fired on all 4 retry attempts while the prompt had actually landed on the
+first attempt and the task completed correctly.
+
+**The correct handling:**
+
+```
+agent_prompt_stalled
+       ↓
+    UNKNOWN (not FAIL)
+       ↓
+  herdr agent get <name>
+       ↓
+  herdr agent read <name>
+       ↓
+  inspect transcript for prompt text
+     /       \
+   YES       NO
+    │         │
+  WAIT      RETRY
+  (task      (prompt was
+  started)   never delivered)
+```
+
+**What this means in practice:**
+- Never short-circuit to FAIL on `agent_prompt_stalled` alone.
+- Never blindly retry without checking the transcript first — the prompt
+  may already be running.
+- The dispatch scripts implement this flow: retry loop + post-retry marker
+  check in the pane transcript. Trust the marker check, not the error code.
 
 ## Lessons from real dispatches (running log)
 
@@ -318,9 +540,8 @@ it every session.
   prompt --wait` call one attempt later worked immediately and produced
   correct output. Fix: scripts retry up to 4 times with a 3s delay whenever
   the response's `error.code` is `agent_prompt_stalled`, and only read the
-  settled status after a non-stalled response. **Never treat
-  `agent_prompt_stalled` as "the agent had nothing to do" — it means the
-  prompt was never delivered; retry, don't skip.**
+  settled status after a non-stalled response. **`agent_prompt_stalled` is
+  UNKNOWN, not FAIL** — see the dedicated section above.
 - **2026-08-13, two more races in the same smoke test (agy, but the first
   two are Herdr-level, not agy-specific):** (a) calling `herdr agent start`
   immediately after `herdr pane split` can hit `{"error":{"code":
@@ -383,7 +604,7 @@ it every session.
     approach, not better. Kept `--wait`. Recorded here so nobody
     "optimizes" this away again without re-testing it first.
   - **New error code found: `{"error":{"code":"timeout","message":"timed
-    out waiting for agent status"}}`**, distinct from
+    out waiting for agent status"}}`,** distinct from
     `agent_prompt_stalled`. Observed when the target agent was already mid
     an unrelated task: the new prompt gets silently **queued** (visible in
     the transcript as a `▸ ...` line under "Press up to edit queued
@@ -417,8 +638,25 @@ it every session.
     main (`idle`-only marker scoping). All four came from combining the
     doc with live dispatches — reading the doc alone would have shipped
     the regression.
+- **2026-08-24, v0.5.0 architecture improvements:** Five structural changes
+  based on external review:
+  - **Renamed** `agy-orchestrator` → `herdr-worker-orchestrator` to reflect
+    the real architecture (Claude → Herdr → any worker kind, not agy-only).
+  - **Stateful task ledger** with JSON task files in `.agents/tasks/` and a
+    global `.agents/state.json` — enables resume-on-restart. Task status
+    follows a well-defined state machine (pending → dispatching → working →
+    verifying → passed/failed).
+  - **Worker isolation** via `git worktree` — prevents workers from
+    conflicting with Claude's working tree, enables safe parallel dispatch,
+    and gives clean `git diff` boundaries for review.
+  - **Diff-based review** enforced: reviewer BRIEFING.md now explicitly
+    instructs the reviewer to ignore worker reports and review only actual
+    diffs, files, and test/build output.
+  - **`agent_prompt_stalled` = UNKNOWN** framing made explicit: not FAIL,
+    requires inspect-then-decide flow. Scripts already implemented this
+    correctly; documentation now matches.
 
-## Confidence notes (as of 2026-08-13)
+## Confidence notes (as of 2026-08-24)
 
 `agy` is a very new CLI (Google, ~May 2026). Community reports (GitHub
 `google-antigravity/antigravity-cli#76`) describe `agy --print` producing no
@@ -436,3 +674,9 @@ given kind like the "first few dispatches of a new kind of task" case in
 the Review Policy above — this applies doubly to any kind beyond `agy` and
 `codex`, which have zero and one real verified dispatch respectively as of
 this rename.
+
+The state machine and worktree isolation features (v0.5.0) are new and have
+not yet been exercised in real dispatches — they are structural improvements
+based on design review, not battle-tested like the core dispatch flow. Use
+them, but expect the first few uses to surface edge cases worth adding to
+this Lessons log.

@@ -12,7 +12,7 @@ poll its lifecycle (idle/working/blocked/done), read its terminal output,
 and send follow-up prompts without relaunching anything.
 
 Usage:
-    python3 dispatch-herdr-worker.py <workspace_abs_path> <agent_record_dir> <prompt> <agent_name> <kind> [timeout_ms]
+    python3 dispatch-herdr-worker.py <workspace_abs_path> <agent_record_dir> <prompt> <agent_name> <kind> [timeout_ms] [--isolation none|worktree] [--task-id TASK-xxx]
 
     workspace_abs_path   Absolute path the worker is allowed to read/write.
                          Passed to `herdr pane split --cwd` AND repeated
@@ -61,6 +61,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import uuid
 
 # Per-kind workspace-scoping quirks. Default (kind not listed): nothing
 # extra --- `pane split --cwd` is assumed sufficient. Add an entry here
@@ -135,6 +136,23 @@ def main():
     timeout_ms = sys.argv[6] if len(sys.argv) > 6 else "300000"
     start_timeout_ms = os.environ.get("HERDR_START_TIMEOUT_MS", "30000")
 
+    # Parse optional flags from remaining args
+    isolation = "none"
+    task_id = None
+    i = 7
+    while i < len(sys.argv):
+        if sys.argv[i] == "--isolation" and i + 1 < len(sys.argv):
+            isolation = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--task-id" and i + 1 < len(sys.argv):
+            task_id = sys.argv[i + 1]
+            i += 2
+        else:
+            i += 1
+    
+    if isolation not in ("none", "worktree"):
+        fail(f"--isolation must be 'none' or 'worktree', got '{isolation}'")
+
     # Per https://herdr.dev/docs/agent-automation/: any herdr --timeout
     # value must be > 3000ms and <= 300000ms (5 min) --- values outside
     # that range are rejected by herdr itself, not silently clamped.
@@ -161,6 +179,38 @@ def main():
     if not herdr:
         fail("herdr not found on PATH.")
 
+    record_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # --- Worktree isolation (v0.5.0) ---
+    worktree_path = None
+    worktree_branch = None
+    effective_workspace = workspace
+    if isolation == "worktree":
+        worktree_dir = Path(workspace) / ".worktrees"
+        worktree_dir.mkdir(parents=True, exist_ok=True)
+        branch_name = f"task/{task_id or agent_name}"
+        worktree_path_obj = worktree_dir / (task_id or agent_name)
+        worktree_path = str(worktree_path_obj)
+        worktree_branch = branch_name
+        print(f"Creating isolated worktree at {worktree_path} (branch {branch_name}) ...", file=sys.stderr)
+        # Create branch from HEAD if it doesn't exist
+        subprocess.run(["git", "branch", branch_name, "HEAD"], capture_output=True, cwd=workspace)
+        wt_result = subprocess.run(
+            ["git", "worktree", "add", worktree_path, branch_name],
+            capture_output=True, text=True, cwd=workspace,
+        )
+        if wt_result.returncode != 0:
+            # Branch might already exist with worktree, try without branch
+            wt_result = subprocess.run(
+                ["git", "worktree", "add", "--detach", worktree_path],
+                capture_output=True, text=True, cwd=workspace,
+            )
+            if wt_result.returncode != 0:
+                fail(f"git worktree add failed: {wt_result.stderr}")
+        effective_workspace = worktree_path
+        print(f"Worktree ready at {effective_workspace}", file=sys.stderr)
+
     native_args_fn = KIND_NATIVE_ARGS.get(kind)
     if native_args_fn is None:
         print(
@@ -171,20 +221,17 @@ def main():
         )
         native_args = []
     else:
-        native_args = native_args_fn(workspace)
-
-    record_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        native_args = native_args_fn(effective_workspace)
 
     full_prompt = (
-        f"Trong thư mục tuyệt đối {workspace} (dùng đúng đường dẫn này, "
+        f"Trong thư mục tuyệt đối {effective_workspace} (dùng đúng đường dẫn này, "
         f"KHÔNG dùng thư mục scratch riêng của bạn): {task}"
     )
 
     print(f"Splitting pane for workspace {workspace} ...", file=sys.stderr)
     split_rc, split_json = run_herdr(
         [herdr, "pane", "split", "--current", "--direction", "right",
-         "--cwd", workspace, "--no-focus"],
+         "--cwd", effective_workspace, "--no-focus"],
         record_dir, "herdr_pane_split.json",
     )
     if split_rc != 0:
@@ -314,7 +361,8 @@ def main():
 - **Herdr agent name:** `{agent_name}`
 - **Herdr pane:** `{pane_id}`
 - **Status after wait:** {status}
-- **prompt exit code:** {prompt_rc}
+- **Isolation:** `{isolation}`{f' (worktree: `{worktree_path}`, branch: `{worktree_branch}`)' if worktree_path else ''}
+{"- **Task ID:** `" + task_id + "`" + chr(10) if task_id else ""}- **prompt exit code:** {prompt_rc}
 - **Commands used:**
 ```
 herdr pane split --current --direction right --cwd "{workspace}" --no-focus
@@ -364,6 +412,58 @@ herdr agent prompt "{agent_name}" "{full_prompt}" --wait --timeout {timeout_ms}
 - Pane `{pane_id}` / agent `{agent_name}` left alive for follow-up prompts and self-check reads.
 """
     (record_dir / "progress.md").write_text(progress_md, encoding="utf-8")
+
+    # --- Task state tracking (v0.5.0) ---
+    if task_id:
+        task_status = "passed" if status in ("idle", "done") else (
+            "blocked" if status == "blocked" else (
+                "working" if status == "working" else "failed"
+            )
+        )
+        task_json = {
+            "id": task_id,
+            "status": task_status,
+            "worker_kind": kind,
+            "worker_name": agent_name,
+            "workspace": workspace,
+            "pane_id": pane_id,
+            "agent_name": agent_name,
+            "attempt": 1,
+            "max_attempts": 3,
+            "isolation": isolation,
+            "worktree_path": worktree_path,
+            "worktree_branch": worktree_branch,
+            "started_at": ts,
+            "updated_at": ts,
+            "prompt": task,
+            "verification": {
+                "files_exist": "pending",
+                "tests": "pending",
+                "build": "pending",
+                "review": "pending",
+            },
+            "error": None if status not in ("no_delivery_confirmed",) else status,
+        }
+        tasks_dir = Path(".agents/tasks")
+        tasks_dir.mkdir(parents=True, exist_ok=True)
+        (tasks_dir / f"{task_id}.json").write_text(
+            json.dumps(task_json, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        # Update state.json
+        state_path = Path(".agents/state.json")
+        if state_path.exists():
+            try:
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, ValueError):
+                state = {"version": "0.5.0", "active_tasks": [], "completed_tasks": []}
+        else:
+            state = {"version": "0.5.0", "active_tasks": [], "completed_tasks": []}
+        if task_id not in state.get("active_tasks", []):
+            state.setdefault("active_tasks", []).append(task_id)
+        state["last_updated"] = ts
+        state_path.write_text(
+            json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
     print(f"Dispatched. status={status} kind={kind} pane={pane_id} agent={agent_name}",
           file=sys.stderr)

@@ -8,7 +8,7 @@
 # output, and send follow-up prompts without relaunching anything.
 #
 # Usage:
-#   dispatch-herdr-worker.sh <workspace_abs_path> <agent_record_dir> <prompt> <agent_name> <kind> [timeout_ms]
+#   dispatch-herdr-worker.sh <workspace_abs_path> <agent_record_dir> <prompt> <agent_name> <kind> [timeout_ms] [--isolation none|worktree] [--task-id TASK-xxx]
 #
 #   workspace_abs_path   Absolute path the worker is allowed to read/write.
 #                         Passed to `herdr pane split --cwd` AND repeated
@@ -57,6 +57,34 @@ KIND="$5"
 TIMEOUT_MS="${6:-300000}"
 START_TIMEOUT_MS="${HERDR_START_TIMEOUT_MS:-30000}"
 
+# Parse optional flags from remaining args
+ISOLATION="none"
+TASK_ID=""
+shift 6 2>/dev/null || shift $#
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --isolation)
+      ISOLATION="${2:-none}"
+      shift 2
+      ;;
+    --task-id)
+      TASK_ID="${2:-}"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+case "$ISOLATION" in
+  none|worktree) ;;
+  *)
+    echo "ERROR: --isolation must be 'none' or 'worktree', got '$ISOLATION'" >&2
+    exit 1
+    ;;
+esac
+
 if [ "${HERDR_ENV:-}" != "1" ]; then
   echo "ERROR: HERDR_ENV != 1. This script must run inside a Herdr-managed pane." >&2
   exit 1
@@ -98,6 +126,30 @@ WORKSPACE="$(cd "$WORKSPACE_ARG" && pwd)"
 mkdir -p "$RECORD_DIR"
 TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
+# --- Worktree isolation (v0.5.0) ---
+WORKTREE_PATH=""
+WORKTREE_BRANCH=""
+EFFECTIVE_WORKSPACE="$WORKSPACE"
+if [ "$ISOLATION" = "worktree" ]; then
+  WORKTREE_DIR="$WORKSPACE/.worktrees"
+  mkdir -p "$WORKTREE_DIR"
+  BRANCH_NAME="task/${TASK_ID:-$AGENT_NAME}"
+  WORKTREE_PATH="$WORKTREE_DIR/${TASK_ID:-$AGENT_NAME}"
+  WORKTREE_BRANCH="$BRANCH_NAME"
+  echo "Creating isolated worktree at $WORKTREE_PATH (branch $BRANCH_NAME) ..." >&2
+  # Create branch from HEAD if it doesn't exist
+  git -C "$WORKSPACE" branch "$BRANCH_NAME" HEAD 2>/dev/null || true
+  if ! git -C "$WORKSPACE" worktree add "$WORKTREE_PATH" "$BRANCH_NAME" 2>/dev/null; then
+    # Branch might already exist with worktree, try without branch
+    if ! git -C "$WORKSPACE" worktree add --detach "$WORKTREE_PATH" 2>/dev/null; then
+      echo "ERROR: git worktree add failed" >&2
+      exit 1
+    fi
+  fi
+  EFFECTIVE_WORKSPACE="$WORKTREE_PATH"
+  echo "Worktree ready at $EFFECTIVE_WORKSPACE" >&2
+fi
+
 # Per-kind workspace-scoping quirks. Default: nothing extra --- `pane split
 # --cwd` is assumed sufficient. Add a case here only once you've actually
 # verified a kind needs more (same discipline as the agy `--add-dir`
@@ -105,7 +157,7 @@ TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 NATIVE_ARGS=()
 case "$KIND" in
   agy)
-    NATIVE_ARGS=(--add-dir "$WORKSPACE")
+    NATIVE_ARGS=(--add-dir "$EFFECTIVE_WORKSPACE")
     ;;
   codex)
     NATIVE_ARGS=()
@@ -125,11 +177,11 @@ jq_find() {
   jq -r --arg k "$1" '[.. | objects | select(has($k)) | .[$k]] | .[0] // empty'
 }
 
-FULL_PROMPT="Trong thư mục tuyệt đối $WORKSPACE (dùng đúng đường dẫn này, KHÔNG dùng thư mục scratch riêng của bạn): $TASK"
+FULL_PROMPT="Trong thư mục tuyệt đối $EFFECTIVE_WORKSPACE (dùng đúng đường dẫn này, KHÔNG dùng thư mục scratch riêng của bạn): $TASK"
 
 echo "Splitting pane for workspace $WORKSPACE ..." >&2
 set +e
-SPLIT_JSON="$(herdr pane split --current --direction right --cwd "$WORKSPACE" --no-focus)"
+SPLIT_JSON="$(herdr pane split --current --direction right --cwd "$EFFECTIVE_WORKSPACE" --no-focus)"
 SPLIT_RC=$?
 set -e
 echo "$SPLIT_JSON" > "$RECORD_DIR/herdr_pane_split.json"
@@ -281,6 +333,14 @@ esac
   echo "- **Herdr agent name:** \`$AGENT_NAME\`"
   echo "- **Herdr pane:** \`$PANE_ID\`"
   echo "- **Status after wait:** $STATUS"
+  if [ -n "$WORKTREE_PATH" ]; then
+    echo "- **Isolation:** \`$ISOLATION\` (worktree: \`$WORKTREE_PATH\`, branch: \`$WORKTREE_BRANCH\`)"
+  else
+    echo "- **Isolation:** \`$ISOLATION\`"
+  fi
+  if [ -n "$TASK_ID" ]; then
+    echo "- **Task ID:** \`$TASK_ID\`"
+  fi
   echo "- **prompt exit code:** $PROMPT_RC"
   echo "- **Commands used:**"
   echo '```'
@@ -322,6 +382,64 @@ esac
   echo "- Reviewer MUST independently verify the actual workspace files — do not trust this status string alone."
   echo "- Pane \`$PANE_ID\` / agent \`$AGENT_NAME\` left alive for follow-up prompts and self-check reads."
 } > "$RECORD_DIR/progress.md"
+
+# --- Task state tracking (v0.5.0) ---
+if [ -n "$TASK_ID" ]; then
+  case "$STATUS" in
+    idle|done)    TASK_STATUS="passed" ;;
+    blocked)      TASK_STATUS="blocked" ;;
+    working)      TASK_STATUS="working" ;;
+    *)            TASK_STATUS="failed" ;;
+  esac
+  TASK_ERROR="null"
+  if [ "$STATUS" = "no_delivery_confirmed" ]; then
+    TASK_ERROR="\"$STATUS\""
+  fi
+  mkdir -p .agents/tasks
+  cat > ".agents/tasks/${TASK_ID}.json" <<TASKEOF
+{
+  "id": "$TASK_ID",
+  "status": "$TASK_STATUS",
+  "worker_kind": "$KIND",
+  "worker_name": "$AGENT_NAME",
+  "workspace": "$WORKSPACE",
+  "pane_id": "$PANE_ID",
+  "agent_name": "$AGENT_NAME",
+  "attempt": 1,
+  "max_attempts": 3,
+  "isolation": "$ISOLATION",
+  "worktree_path": $([ -n "$WORKTREE_PATH" ] && echo "\"$WORKTREE_PATH\"" || echo "null"),
+  "worktree_branch": $([ -n "$WORKTREE_BRANCH" ] && echo "\"$WORKTREE_BRANCH\"" || echo "null"),
+  "started_at": "$TS",
+  "updated_at": "$TS",
+  "prompt": $(printf '%s' "$TASK" | jq -Rs .),
+  "verification": {
+    "files_exist": "pending",
+    "tests": "pending",
+    "build": "pending",
+    "review": "pending"
+  },
+  "error": $TASK_ERROR
+}
+TASKEOF
+  # Update state.json
+  STATE_PATH=".agents/state.json"
+  mkdir -p .agents
+  if [ -f "$STATE_PATH" ]; then
+    STATE_JSON="$(cat "$STATE_PATH" 2>/dev/null || echo '{}')"
+  else
+    STATE_JSON='{"version":"0.5.0","active_tasks":[],"completed_tasks":[]}'
+  fi
+  # Add task_id to active_tasks if not already present, update last_updated
+  STATE_JSON="$(echo "$STATE_JSON" | jq --arg tid "$TASK_ID" --arg ts "$TS" '
+    .version //= "0.5.0" |
+    .active_tasks //= [] |
+    .completed_tasks //= [] |
+    (if (.active_tasks | index($tid)) == null then .active_tasks += [$tid] else . end) |
+    .last_updated = $ts
+  ')"
+  printf '%s\n' "$STATE_JSON" > "$STATE_PATH"
+fi
 
 echo "Dispatched. status=$STATUS kind=$KIND pane=$PANE_ID agent=$AGENT_NAME" >&2
 
