@@ -83,6 +83,10 @@ plugin.
 
 ### 3. Install the plugin
 
+You can install this plugin in **Claude Code**, natively in **Herdr**, or **both**:
+
+#### Option A: In Claude Code (Agent Skill / Plugin)
+
 ```
 /plugin marketplace add https://github.com/anhnd3005-infinity/claude-agy-orchestrator.git
 /plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
@@ -91,34 +95,45 @@ plugin.
 Repo is **public** — no SSH key, no GitHub login needed. (SSH also works if
 preferred: `git@github.com:anhnd3005-infinity/claude-agy-orchestrator.git`.)
 
-✅ **Verify:**
+✅ **Verify in Claude Code:**
 ```
 /plugin
 ```
 should list `herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace` as enabled.
 Works from **any** project on the machine, not just this repo.
 
+#### Option B: Natively in Herdr (Workflow Plugin)
+
+Install straight from GitHub:
+```bash
+herdr plugin install anhnd3005-infinity/claude-agy-orchestrator
+```
+
+Or link locally for development / local usage:
+```bash
+herdr plugin link /path/to/claude-agy-orchestrator
+```
+
+✅ **Verify in Herdr:**
+```bash
+herdr plugin list
+herdr plugin action list --plugin herdr-worker-orchestrator
+```
+
 ### Updating later
 
-New commits land on `main` over time (see Version history at the bottom).
-You do **not** need to re-add the marketplace or reinstall from scratch —
-two commands:
-
+**For Claude Code:**
 ```
 /plugin marketplace update
 /plugin update herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
 ```
 
-The first refreshes the marketplace catalog from git (pulls latest
-commits); the second actually installs the new version — running only the
-first does not update the plugin itself. From a plain terminal instead of
-an interactive session (e.g. scripting/CI), use `claude plugin update
-herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace -y` (the `-y` skips the
-confirmation prompt; it's required outside an interactive session, ignored
-inside one). There's no "update all" — update by plugin name.
-
-✅ **Verify the version landed:** re-run `/plugin` and check the version
-number shown against the one in this README's Version history.
+**For Herdr:**
+```bash
+# If installed from GitHub:
+herdr plugin install anhnd3005-infinity/claude-agy-orchestrator --force
+# If linked locally: git pull is enough
+```
 
 ### You're set up. Try it:
 
@@ -128,6 +143,8 @@ Claude will ask a clarifying question first if anything about scope, style,
 "done", or which kind is ambiguous — that's expected, not a bug.
 
 ## How to use it
+
+### In Claude Code
 
 No slash command required — this is a **skill**, Claude pulls it in
 automatically when a request matches. Just ask normally:
@@ -142,6 +159,21 @@ To force it explicitly instead of relying on auto-match:
 
 Add "quan trọng"/"important" in the task text to force an independent
 reviewer subagent regardless of the normal importance-bar check.
+
+### In Herdr CLI
+
+Invoke plugin actions directly from your terminal:
+
+```bash
+# 1. View live orchestration status (active tasks, live agent states, verification)
+herdr plugin action invoke herdr-worker-orchestrator.status
+
+# 2. Check and resume in-progress tasks after a restart/session crash
+herdr plugin action invoke herdr-worker-orchestrator.resume
+
+# 3. Inspect plugin action execution logs
+herdr plugin log list --plugin herdr-worker-orchestrator
+```
 
 Read `skills/dispatching-to-herdr-workers/SKILL.md` for the full process —
 one file, worth reading end to end once.
