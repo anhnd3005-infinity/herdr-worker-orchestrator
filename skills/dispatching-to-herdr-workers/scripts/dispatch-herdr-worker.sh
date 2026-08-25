@@ -177,7 +177,7 @@ jq_find() {
   jq -r --arg k "$1" '[.. | objects | select(has($k)) | .[$k]] | .[0] // empty'
 }
 
-FULL_PROMPT="Trong thư mục tuyệt đối $EFFECTIVE_WORKSPACE (dùng đúng đường dẫn này, KHÔNG dùng thư mục scratch riêng của bạn): $TASK"
+FULL_PROMPT="In absolute directory $EFFECTIVE_WORKSPACE (use this exact path, DO NOT use your own scratch directory): $TASK"
 
 echo "Splitting pane for workspace $WORKSPACE ..." >&2
 set +e
@@ -318,7 +318,7 @@ printf '%s\n' "$READ_TEXT" > "$RECORD_DIR/agent_output.txt"
 READ_COMPACT="$(printf '%s' "$READ_TEXT" | tr -d ' \t\n\r')"
 case "$STATUS" in
   idle|done)
-    if ! printf '%s' "$READ_COMPACT" | grep -qF "Trongthưmụctuyệtđối"; then
+    if ! printf '%s' "$READ_COMPACT" | grep -qE "Inabsolutedirectory|Trongthưmụctuyệtđối"; then
       STATUS="no_delivery_confirmed"
     fi
     ;;

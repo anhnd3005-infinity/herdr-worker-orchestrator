@@ -224,8 +224,8 @@ def main():
         native_args = native_args_fn(effective_workspace)
 
     full_prompt = (
-        f"Trong thư mục tuyệt đối {effective_workspace} (dùng đúng đường dẫn này, "
-        f"KHÔNG dùng thư mục scratch riêng của bạn): {task}"
+        f"In absolute directory {effective_workspace} (use this exact path, "
+        f"DO NOT use your own scratch directory): {task}"
     )
 
     print(f"Splitting pane for workspace {workspace} ...", file=sys.stderr)
@@ -350,7 +350,7 @@ def main():
     # mislabel a legitimately slow, still-running task as a failure.
     # `blocked` is already handled on its own below regardless of marker.
     read_compact = "".join(read_text.split())
-    if status in ("idle", "done") and "Trongthưmụctuyệtđối" not in read_compact:
+    if status in ("idle", "done") and not any(m in read_compact for m in ("Inabsolutedirectory", "Trongthưmụctuyệtđối")):
         status = "no_delivery_confirmed"
 
     dispatch_md = f"""# Dispatch — {record_dir.name}

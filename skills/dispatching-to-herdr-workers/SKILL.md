@@ -557,7 +557,7 @@ it every session.
   on the first attempt and the task completed correctly — the error is a
   heuristic, not a reliable non-delivery signal. Fix: after the retry loop,
   check the pane transcript itself (`herdr agent read`) for the fixed
-  prompt-template marker text ("Trong thư mục tuyệt đối...", present in
+  prompt-template marker text ("In absolute directory...", present in
   every prompt this skill sends regardless of task content or kind) before
   trusting any status. No marker in the transcript → force status to
   `no_delivery_confirmed` and refuse to report success, no matter what

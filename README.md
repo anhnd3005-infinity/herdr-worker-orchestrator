@@ -4,8 +4,7 @@
 [![Version](https://img.shields.io/badge/version-0.5.0-06b6d4?style=for-the-badge)](https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/releases)
 [![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)](LICENSE)
 
-> 🌐 **Live Showcase & Interactive Simulator:** [anhnd3005-infinity.github.io/herdr-worker-orchestrator](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)  
-> 🎬 **30s Remotion Video Walkthrough:** [`remotion/`](remotion/) or watch directly on the showcase website!
+> 🌐 **Live Showcase & Interactive Simulator:** [anhnd3005-infinity.github.io/herdr-worker-orchestrator](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)
 
 Claude Code as orchestrator, CLI agent workers of any
 [Herdr](https://herdr.dev)-supported kind (`agy`, `codex`, and in principle
@@ -144,7 +143,7 @@ herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator --force
 
 ### You're set up. Try it:
 
-> "Dùng agy làm worker để tạo file hello.py, chạy thử, rồi báo kết quả cho tôi."
+> "Use agy as a worker to create a RESTful API using FastAPI in the workspace, thoroughly test it, and report the results back to me."
 
 Claude will ask a clarifying question first if anything about scope, style,
 "done", or which kind is ambiguous — that's expected, not a bug.
@@ -156,15 +155,15 @@ Claude will ask a clarifying question first if anything about scope, style,
 No slash command required — this is a **skill**, Claude pulls it in
 automatically when a request matches. Just ask normally:
 
-> "Dispatch this to a codex worker qua Herdr, rồi tự self-check kết quả."
+> "Dispatch this to a codex worker via Herdr, then self-check the results."
 
 To force it explicitly instead of relying on auto-match:
 
 ```
-/herdr-dispatch Tạo file X bằng agy, chạy thử, báo kết quả cho tôi.
+/herdr-dispatch Create a RESTful FastAPI service using agy, test it thoroughly, and report the results.
 ```
 
-Add "quan trọng"/"important" in the task text to force an independent
+Add "important" in the task text to force an independent
 reviewer subagent regardless of the normal importance-bar check.
 
 ### In Herdr CLI
@@ -341,8 +340,7 @@ era. Attempt 1 silently wrote to agy's scratch dir despite reporting
 success; attempt 2 (with `--add-dir`) worked and was independently
 verified. Produced the `--add-dir` quirk and the ledger convention.
 
-**2. `helloworld-tabs-demo`** (a separate project). Asked for "1 website
-đơn giản helloworld." Dispatched without clarifying "đơn giản" first (a
+**2. `helloworld-tabs-demo`** (a separate project). Asked for "a simple helloworld website." Dispatched without clarifying "simple" first (a
 mistake — added step 0 to the process); agy delivered a full
 "Premium Dark & Glassmorphism" site, accurate to the letter, well beyond
 intended spirit. `grep -i "hello world"` false-negatived on text split

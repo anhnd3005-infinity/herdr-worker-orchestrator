@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Herdr Worker Orchestrator — Next-Gen AI Agent Orchestration</title>
+  <title>Herdr Worker Orchestrator — Deterministic Multi-Agent AI Runtime</title>
   <meta name="description" content="Orchestrate autonomous AI CLI agents (agy, codex, ...) with Claude Code as the brain, Herdr as the persistent terminal layer, git worktree isolation, and diff-based review.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 
-  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -41,7 +41,7 @@
             },
             dark: {
               950: '#030712',
-              900: '#0b0f19',
+              900: '#090d16',
               850: '#0e1424',
               800: '#151d30',
               700: '#1e293b',
@@ -51,17 +51,26 @@
           animation: {
             'glow-pulse': 'glowPulse 8s ease-in-out infinite alternate',
             'float': 'float 5s ease-in-out infinite',
-            'spin-slow': 'spin 12s linear infinite',
-            'border-beam': 'borderBeam 4s linear infinite',
+            'spin-slow': 'spin 14s linear infinite',
+            'border-flow': 'borderFlow 3s ease infinite',
+            'equalizer': 'equalizer 0.8s ease-in-out infinite alternate',
           },
           keyframes: {
             glowPulse: {
-              '0%': { opacity: '0.25', transform: 'scale(0.95)' },
-              '100%': { opacity: '0.55', transform: 'scale(1.08)' },
+              '0%': { opacity: '0.2', transform: 'scale(0.96)' },
+              '100%': { opacity: '0.45', transform: 'scale(1.06)' },
             },
             float: {
               '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-10px)' },
+              '50%': { transform: 'translateY(-8px)' },
+            },
+            borderFlow: {
+              '0%, 100%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+            },
+            equalizer: {
+              '0%': { height: '4px' },
+              '100%': { height: '16px' }
             }
           }
         }
@@ -73,25 +82,25 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    /* Custom Glass & Spotlight Effects */
+    /* Glassmorphism & Spotlight */
     .spotlight-card {
       position: relative;
-      background: rgba(14, 20, 36, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(14, 20, 36, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 1.25rem;
       overflow: hidden;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .spotlight-card::before {
       content: '';
       position: absolute;
       top: var(--mouse-y, -1000px);
       left: var(--mouse-x, -1000px);
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.18), transparent 70%);
       transform: translate(-50%, -50%);
       pointer-events: none;
       opacity: 0;
@@ -101,13 +110,13 @@
       opacity: 1;
     }
     .spotlight-card:hover {
-      border-color: rgba(99, 102, 241, 0.35);
-      box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 16px 40px -12px rgba(99, 102, 241, 0.25);
     }
 
     /* Gradients */
     .text-gradient-hero {
-      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #818cf8 80%, #06b6d4 100%);
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 35%, #818cf8 70%, #06b6d4 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -123,14 +132,9 @@
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
 
-    /* Badge glow */
-    .badge-glow {
-      box-shadow: 0 0 20px -2px rgba(99, 102, 241, 0.4);
-    }
-
     /* Terminal scroll */
     .terminal-scroll::-webkit-scrollbar {
-      width: 6px;
+      width: 5px;
     }
     .terminal-scroll::-webkit-scrollbar-thumb {
       background: #1e293b;
@@ -146,18 +150,18 @@
 
   <!-- Ambient Light Orbs -->
   <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute top-[-15%] left-[25%] w-[650px] h-[650px] bg-brand-600/15 rounded-full blur-[150px] animate-glow-pulse"></div>
-    <div class="absolute top-[40%] right-[-10%] w-[550px] h-[550px] bg-accent-cyan/10 rounded-full blur-[150px] animate-glow-pulse" style="animation-delay: -4s;"></div>
-    <div class="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-accent-purple/10 rounded-full blur-[160px]"></div>
+    <div class="absolute top-[-10%] left-[20%] w-[700px] h-[700px] bg-brand-600/15 rounded-full blur-[160px] animate-glow-pulse"></div>
+    <div class="absolute top-[35%] right-[-10%] w-[600px] h-[600px] bg-accent-cyan/10 rounded-full blur-[160px] animate-glow-pulse" style="animation-delay: -4s;"></div>
+    <div class="absolute bottom-[-10%] left-[-5%] w-[650px] h-[650px] bg-accent-purple/10 rounded-full blur-[170px]"></div>
     <div class="absolute inset-0 bg-grid-pattern"></div>
   </div>
 
   <!-- Top Announcement Banner -->
-  <div class="relative z-50 bg-gradient-to-r from-brand-900/60 via-dark-900 to-accent-cyan/20 border-b border-white/5 py-2 px-4 text-center text-xs font-medium text-slate-300 flex items-center justify-center gap-2">
+  <div class="relative z-50 bg-gradient-to-r from-brand-900/70 via-dark-900 to-accent-cyan/20 border-b border-white/10 py-2.5 px-4 text-center text-xs font-medium text-slate-300 flex items-center justify-center gap-2">
     <span class="px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] font-mono font-bold uppercase tracking-wider">v0.5.0 Released</span>
-    <span>Full state machine ledger, git worktree isolation &amp; dual Herdr + Claude support.</span>
-    <a href="#installation" class="text-accent-cyan hover:underline font-semibold ml-1 inline-flex items-center gap-1">
-      Install Now <i data-lucide="arrow-right" class="w-3 h-3"></i>
+    <span class="hidden sm:inline">Enterprise multi-agent orchestration with Git Worktree Isolation &amp; Diff Reviews.</span>
+    <a href="#installation" class="text-accent-cyan hover:underline font-semibold inline-flex items-center gap-1">
+      Install Plugin <i data-lucide="arrow-right" class="w-3 h-3"></i>
     </a>
   </div>
 
@@ -175,25 +179,34 @@
             <span>herdr-worker-orchestrator</span>
             <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-semibold">v0.5.0</span>
           </div>
-          <div class="text-[11px] text-slate-400 font-mono">by Infinity Tech • Duc Anh</div>
+          <div class="text-[11px] text-slate-400 font-mono">by Infinity Tech • Đức Anh</div>
         </div>
       </a>
 
-      <!-- Navigation -->
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+      <!-- Navigation Links -->
+      <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-400">
         <a href="#playground" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Live Simulator</a>
+        <a href="#audio-walkthrough" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="volume-2" class="w-4 h-4 text-emerald-400"></i> Audio Overview</a>
+        <a href="#video-demo" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="play-circle" class="w-4 h-4 text-accent-purple"></i> Video Demo</a>
         <a href="#architecture" class="hover:text-white transition">Architecture</a>
         <a href="#superpowers" class="hover:text-white transition">5 Superpowers</a>
-        <a href="#author" class="hover:text-white transition">Author &amp; Team</a>
+        <a href="#comparison" class="hover:text-white transition">Comparison</a>
+        <a href="#author" class="hover:text-white transition">Creator</a>
         <a href="#installation" class="hover:text-white transition">Quick Start</a>
       </nav>
 
-      <!-- Action Buttons -->
+      <!-- Action & Sound Toggle Buttons -->
       <div class="flex items-center gap-3">
+        <!-- SFX Toggle -->
+        <button id="sfx-toggle-btn" onclick="toggleSFX()" title="Toggle Web Audio Sound Effects" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-slate-300 bg-dark-850 hover:bg-dark-800 border border-white/10 rounded-xl transition">
+          <i id="sfx-icon" data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span id="sfx-status">Sound ON</span>
+        </button>
+
         <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" 
            class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900/90 hover:bg-slate-800 border border-white/10 rounded-xl transition shadow-sm hover:border-brand-500/40">
           <i data-lucide="github" class="w-4 h-4"></i>
-          <span>GitHub</span>
+          <span class="hidden sm:inline">GitHub</span>
           <span class="text-xs bg-slate-800 px-1.5 py-0.5 rounded text-brand-300 font-mono border border-white/5">★ Star</span>
         </a>
       </div>
@@ -201,11 +214,11 @@
   </header>
 
   <!-- Hero Section -->
-  <section class="relative pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10">
+  <section class="relative pt-16 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10">
     <div class="text-center max-w-4xl mx-auto">
       
       <!-- Eyebrow Badge -->
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-8 badge-glow">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-6">
         <span class="w-2 h-2 rounded-full bg-accent-cyan animate-ping"></span>
         <span>Deterministic Multi-Agent Runtime Harness</span>
       </div>
@@ -216,30 +229,75 @@
       </h1>
 
       <!-- Subtitle -->
-      <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed mb-10 max-w-3xl mx-auto">
-        Stop letting coding agents hallucinate completion. <strong>Claude Code</strong> coordinates as the high-level brain, <strong>Herdr</strong> runs persistent terminal panes, and isolated workers (<strong>agy, codex</strong>) write code safely with automated diff reviews.
+      <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed mb-8 max-w-3xl mx-auto">
+        Stop letting coding agents hallucinate completion. <strong>Claude Code</strong> coordinates as the high-level brain, <strong>Herdr</strong> manages persistent terminal panes, and isolated workers (<strong>agy, codex</strong>) write code safely in Git worktrees with automated diff reviews.
       </p>
+
+      <!-- ══════════════════════════════════════════════════════════════════
+           AUDIO OVERVIEW / PODCAST BAR (PROMINENT AUDIO WALKTHROUGH)
+           ══════════════════════════════════════════════════════════════════ -->
+      <div id="audio-walkthrough" class="mb-10 max-w-3xl mx-auto p-4 sm:p-5 rounded-2xl spotlight-card border border-emerald-500/30 bg-dark-900/90 shadow-xl shadow-emerald-500/5 text-left scroll-mt-24">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          
+          <!-- Play / Pause Button & Audio Label -->
+          <div class="flex items-center gap-3.5 w-full sm:w-auto">
+            <button id="audio-play-btn" onclick="toggleAudio()" class="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-accent-cyan text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 hover:scale-105 active:scale-95 transition flex-shrink-0">
+              <i id="audio-icon" data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+            </button>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-white tracking-wide">30-Second Audio Walkthrough</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> 🔊 Narration + Synth
+                </span>
+              </div>
+              <div class="text-slate-400 text-xs font-mono flex items-center gap-2 mt-1">
+                <span id="audio-time" class="text-emerald-400 font-bold">0:00 / 0:30</span>
+                <span>•</span>
+                <span class="text-slate-300">English Voiceover by Daniel</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar & Equalizer -->
+          <div class="flex items-center gap-3 w-full sm:w-64">
+            <div class="flex-1 bg-dark-800 rounded-full h-2.5 overflow-hidden cursor-pointer relative border border-white/5" onclick="seekAudioProgress(event)">
+              <div id="audio-progress-bar" class="bg-gradient-to-r from-emerald-400 to-accent-cyan h-full w-0 transition-all"></div>
+            </div>
+            
+            <!-- Animated Equalizer Bars -->
+            <div id="audio-eq" class="flex items-end gap-0.5 h-5 opacity-40">
+              <span class="w-1 bg-emerald-400 rounded-full h-2"></span>
+              <span class="w-1 bg-accent-cyan rounded-full h-4"></span>
+              <span class="w-1 bg-brand-400 rounded-full h-3"></span>
+              <span class="w-1 bg-emerald-400 rounded-full h-5"></span>
+            </div>
+          </div>
+
+        </div>
+        <audio id="global-narration-audio" src="narration.mp3" preload="metadata"></audio>
+      </div>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
         <a href="#playground" 
            class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-accent-cyan hover:from-brand-500 hover:to-accent-cyan shadow-xl shadow-brand-500/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 text-base">
           <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-          <span>Try Interactive Simulator</span>
+          <span>Launch Live Simulator</span>
         </a>
-        <a href="#installation" 
+        <a href="#video-demo" 
            class="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-slate-200 bg-dark-850 hover:bg-dark-800 border border-white/10 hover:border-brand-500/40 transition flex items-center justify-center gap-2.5 text-base">
-          <i data-lucide="terminal" class="w-5 h-5 text-accent-cyan"></i>
-          <span>1-Click Install</span>
+          <i data-lucide="video" class="w-5 h-5 text-accent-purple"></i>
+          <span>Watch 30s Video Demo (🔊 Audio)</span>
         </a>
       </div>
 
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         INTERACTIVE LIVE SIMULATOR PLAYGROUND
+         INTERACTIVE LIVE SIMULATOR PLAYGROUND (WITH SOUND FX)
          ══════════════════════════════════════════════════════════════════ -->
-    <div id="playground" class="mt-8 max-w-5xl mx-auto spotlight-card border border-white/10 shadow-2xl shadow-black/90">
+    <div id="playground" class="mt-4 max-w-5xl mx-auto spotlight-card border border-white/10 shadow-2xl shadow-black/90 scroll-mt-24">
       
       <!-- Playground Header -->
       <div class="bg-dark-900/90 px-6 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-4">
@@ -252,11 +310,22 @@
           <span class="font-mono text-xs font-semibold text-white tracking-wide flex items-center gap-1.5">
             <i data-lucide="cpu" class="w-3.5 h-3.5 text-accent-cyan"></i> LIVE DISPATCH SIMULATOR
           </span>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono hidden sm:inline">🔊 Sound Effects Enabled</span>
         </div>
 
         <!-- Controls / Selectors -->
         <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
           
+          <!-- Scenario Preset Selector -->
+          <div class="flex items-center gap-1.5 bg-dark-800 px-2.5 py-1 rounded-lg border border-white/5">
+            <span class="text-slate-400">Task:</span>
+            <select id="sim-task-preset" class="bg-transparent text-white font-bold outline-none cursor-pointer">
+              <option value="fastapi">FastAPI REST API Service</option>
+              <option value="auth">JWT Auth Module & Middleware</option>
+              <option value="refactor">Async Database Pool Migration</option>
+            </select>
+          </div>
+
           <!-- Worker Kind Selector -->
           <div class="flex items-center gap-1.5 bg-dark-800 px-2.5 py-1 rounded-lg border border-white/5">
             <span class="text-slate-400">Worker:</span>
@@ -270,11 +339,11 @@
           <!-- Isolation Switch -->
           <label class="flex items-center gap-1.5 bg-dark-800 px-2.5 py-1 rounded-lg border border-white/5 cursor-pointer select-none">
             <input type="checkbox" id="sim-isolation" checked class="accent-brand-500 cursor-pointer">
-            <span class="text-slate-300">Git Worktree Isolation 🔒</span>
+            <span class="text-slate-300">Git Worktree 🔒</span>
           </label>
 
           <!-- Run Button -->
-          <button id="sim-run-btn" onclick="runSimulation()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-accent-cyan text-white font-bold hover:brightness-110 transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20">
+          <button id="sim-run-btn" onclick="runSimulation()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-accent-cyan text-white font-bold hover:brightness-110 active:scale-95 transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20">
             <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
             <span>DISPATCH</span>
           </button>
@@ -292,8 +361,8 @@
           </div>
 
           <div id="sim-log-output" class="space-y-2 text-slate-300">
-            <div class="text-slate-400">// Select worker parameters above and click [DISPATCH] to simulate live execution.</div>
-            <div class="text-brand-300">&gt; Claude ready in Herdr session (HERDR_ENV=1).</div>
+            <div class="text-slate-400">// Select a task preset and worker above, then click [DISPATCH] to simulate live execution.</div>
+            <div class="text-brand-300">&gt; Claude orchestrator online inside Herdr session (HERDR_ENV=1).</div>
           </div>
         </div>
 
@@ -310,16 +379,16 @@
             <!-- Lifecycle Steps -->
             <div class="space-y-2 text-[11px]">
               <div id="step-pending" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 1. pending &amp; briefing
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 1. pending &amp; briefing (.agents/tasks/)
               </div>
               <div id="step-working" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 2. pane split &amp; working
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 2. pane split &amp; working (Herdr)
               </div>
               <div id="step-verifying" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 3. diff-based review
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 3. diff-based review (Reviewer)
               </div>
               <div id="step-passed" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 4. passed &amp; merged
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 4. passed &amp; ledger committed
               </div>
             </div>
           </div>
@@ -328,40 +397,67 @@
           <div id="sim-diff-box" class="bg-black/80 p-3 rounded-lg border border-white/5 space-y-1 text-[11px] hidden">
             <div class="text-slate-400 text-[10px] uppercase font-bold border-b border-white/10 pb-1 flex justify-between">
               <span>Reviewer git diff HEAD</span>
-              <span class="text-emerald-400 font-bold">VERIFIED</span>
+              <span class="text-emerald-400 font-bold">+42 lines, 0 regressions</span>
             </div>
-            <div class="text-emerald-400">+ def create_access_token(data: dict):</div>
-            <div class="text-emerald-400">+     to_encode = data.copy()</div>
-            <div class="text-emerald-400">+     return jwt.encode(to_encode, SECRET_KEY)</div>
+            <div class="text-slate-500 pt-1">diff --git a/app/main.py b/app/main.py</div>
+            <div class="text-emerald-400">+ @app.get("/api/v1/health")</div>
+            <div class="text-emerald-400">+ async def health_check(): return {"status": "ok"}</div>
           </div>
-
         </div>
 
       </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         MOTION GRAPHICS VIDEO SHOWCASE (REMOTION)
+         MOTION GRAPHICS VIDEO SHOWCASE WITH VOICEOVER (REMOTION)
          ══════════════════════════════════════════════════════════════════ -->
-    <div class="mt-20 max-w-5xl mx-auto text-center">
+    <div id="video-demo" class="mt-24 max-w-5xl mx-auto text-center scroll-mt-24">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-purple/10 border border-accent-purple/30 text-accent-purple text-xs font-mono font-semibold uppercase tracking-wider mb-4">
-        <i data-lucide="video" class="w-3.5 h-3.5"></i>
-        <span>Remotion Motion Graphics Preview</span>
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400 animate-pulse"></i>
+        <span>1080p Motion Graphics • English Voiceover Audio Included</span>
       </div>
       <h3 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
         Watch How Orchestration Works in 30 Seconds
       </h3>
-      <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto mb-8">
-        Full animated walkthrough explaining the 3-layer architecture, runtime safety heuristics, and diff verification.
+      <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto mb-6">
+        Full animated video with synchronized narration and ambient synth soundtrack explaining the 3-layer architecture, runtime safety heuristics, and diff verification.
       </p>
 
       <!-- Video Player Frame -->
       <div class="spotlight-card rounded-2xl overflow-hidden border border-brand-500/30 shadow-2xl shadow-brand-500/10 p-2 sm:p-4 bg-dark-900/90">
         <div class="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center group">
-          <video id="remotion-video-player" controls preload="metadata" poster="thumbnail.png" class="w-full h-full object-contain rounded-lg">
+          <video id="remotion-video-player" controls playsinline preload="metadata" poster="thumbnail.png" class="w-full h-full object-contain rounded-lg">
             <source src="video.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
+
+          <!-- Custom Play with Audio Overlay -->
+          <button id="video-play-overlay" onclick="playVideoUnmuted()" class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 transition-all hover:bg-black/30 cursor-pointer">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-brand-600 via-accent-purple to-accent-cyan text-white flex items-center justify-center shadow-2xl shadow-brand-500/50 hover:scale-110 active:scale-95 transition-transform">
+              <i data-lucide="play" class="w-8 h-8 fill-current ml-1"></i>
+            </div>
+            <div class="px-4 py-1.5 rounded-full bg-dark-900/90 border border-white/10 text-xs font-mono text-white flex items-center gap-2 shadow-xl">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Click to Play with Voiceover (🔊 1080p)</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Video Chapter Jump Controls -->
+        <div class="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-mono">
+          <span class="text-slate-500 font-bold mr-1">Jump to Scene:</span>
+          <button onclick="seekVideo(0)" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-brand-600/30 text-slate-300 hover:text-brand-300 border border-white/5 transition flex items-center gap-1">
+            <span class="text-brand-400 font-bold">0:00</span> The Problem
+          </button>
+          <button onclick="seekVideo(7)" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-accent-cyan/30 text-slate-300 hover:text-cyan-300 border border-white/5 transition flex items-center gap-1">
+            <span class="text-accent-cyan font-bold">0:07</span> 3-Layer Architecture
+          </button>
+          <button onclick="seekVideo(15)" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-accent-purple/30 text-slate-300 hover:text-purple-300 border border-white/5 transition flex items-center gap-1">
+            <span class="text-accent-purple font-bold">0:15</span> 4 Superpowers
+          </button>
+          <button onclick="seekVideo(23)" class="px-2.5 py-1 rounded bg-dark-800 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/5 transition flex items-center gap-1">
+            <span class="text-emerald-400 font-bold">0:23</span> 1-Click Install
+          </button>
         </div>
       </div>
     </div>
@@ -371,7 +467,7 @@
        ARCHITECTURE & 3-TIER DECOUPLING
        ══════════════════════════════════════════════════════════════════ -->
   <section id="architecture" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
-    <div class="text-center max-w-3xl mx-auto mb-20">
+    <div class="text-center max-w-3xl mx-auto mb-16">
       <h2 class="text-xs font-mono font-bold text-accent-cyan uppercase tracking-widest mb-3">Enterprise Decoupled Runtime</h2>
       <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
         Why 3-Layer Orchestration Wins
@@ -399,7 +495,7 @@
         <div class="space-y-2 border-t border-white/5 pt-4 text-xs font-mono text-slate-300">
           <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Writes .agents/BRIEFING.md</div>
           <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Manages Task State Machine</div>
-          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Automatic crash resume</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Automatic crash recovery</div>
         </div>
       </div>
 
@@ -445,7 +541,7 @@
   </section>
 
   <!-- ══════════════════════════════════════════════════════════════════
-       5 SUPERPOWERS SECTION (BENTO GRID 2.0)
+       5 SUPERPOWERS SECTION (BENTO GRID)
        ══════════════════════════════════════════════════════════════════ -->
   <section id="superpowers" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
     <div class="text-center max-w-3xl mx-auto mb-16">
@@ -544,6 +640,63 @@
   </section>
 
   <!-- ══════════════════════════════════════════════════════════════════
+       COMPARISON MATRIX SECTION
+       ══════════════════════════════════════════════════════════════════ -->
+  <section id="comparison" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-xs font-mono font-bold text-accent-cyan uppercase tracking-widest mb-3">Side-by-Side Analysis</h2>
+      <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+        Single-Agent CLI vs 3-Layer Orchestration
+      </h3>
+      <p class="text-slate-400 text-base sm:text-lg">
+        Why naive agent execution breaks down on non-trivial engineering tasks.
+      </p>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="spotlight-card rounded-2xl overflow-hidden border border-white/10 shadow-2xl max-w-5xl mx-auto">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm font-sans border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 bg-dark-900/90 text-xs font-mono uppercase">
+              <th class="py-4 px-6 text-slate-400">Feature / Capability</th>
+              <th class="py-4 px-6 text-rose-400">Standard Single Agent</th>
+              <th class="py-4 px-6 text-brand-300 font-bold bg-brand-500/10 border-l border-r border-brand-500/20">Herdr Worker Orchestrator</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 text-slate-300 text-xs sm:text-sm">
+            <tr>
+              <td class="py-4 px-6 font-semibold text-white">Execution Isolation</td>
+              <td class="py-4 px-6 text-rose-300">❌ Runs in active directory, overwriting code</td>
+              <td class="py-4 px-6 text-emerald-300 font-semibold bg-brand-500/5 border-l border-r border-brand-500/20">✅ Git Worktrees on dedicated branches</td>
+            </tr>
+            <tr>
+              <td class="py-4 px-6 font-semibold text-white">State & Crash Recovery</td>
+              <td class="py-4 px-6 text-rose-300">❌ Lost on terminal crash or context compaction</td>
+              <td class="py-4 px-6 text-emerald-300 font-semibold bg-brand-500/5 border-l border-r border-brand-500/20">✅ Stateful .agents/ ledger & 1-click resume</td>
+            </tr>
+            <tr>
+              <td class="py-4 px-6 font-semibold text-white">Result Verification</td>
+              <td class="py-4 px-6 text-rose-300">❌ Blindly trusts agent's self-reported "Done"</td>
+              <td class="py-4 px-6 text-emerald-300 font-semibold bg-brand-500/5 border-l border-r border-brand-500/20">✅ Diff-based review + test suite execution</td>
+            </tr>
+            <tr>
+              <td class="py-4 px-6 font-semibold text-white">Delivery Reliability</td>
+              <td class="py-4 px-6 text-rose-300">❌ False-positive idle & silent delivery drops</td>
+              <td class="py-4 px-6 text-emerald-300 font-semibold bg-brand-500/5 border-l border-r border-brand-500/20">✅ Transcript marker check & stalled=UNKNOWN</td>
+            </tr>
+            <tr>
+              <td class="py-4 px-6 font-semibold text-white">Model Budget Optimization</td>
+              <td class="py-4 px-6 text-rose-300">❌ Burns expensive flagship quota for boilerplate</td>
+              <td class="py-4 px-6 text-emerald-300 font-semibold bg-brand-500/5 border-l border-r border-brand-500/20">✅ Offloads execution to worker CLI quota</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
        AUTHOR & INFINITY TECH SHOWCASE SECTION
        ══════════════════════════════════════════════════════════════════ -->
   <section id="author" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
@@ -606,7 +759,7 @@
   <!-- ══════════════════════════════════════════════════════════════════
        INSTALLATION & QUICK START SECTION
        ══════════════════════════════════════════════════════════════════ -->
-  <section id="installation" class="py-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-white/5 relative z-10">
+  <section id="installation" class="py-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-white/5 relative z-10 scroll-mt-24">
     <div class="text-center max-w-3xl mx-auto mb-16">
       <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Getting Started</h2>
       <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
@@ -660,7 +813,7 @@
     <div class="mt-8 p-6 rounded-2xl spotlight-card border border-brand-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <div class="text-xs font-mono font-bold text-brand-400 uppercase tracking-wider mb-1">Natural Prompt Activation</div>
-        <div class="text-slate-200 text-sm font-mono">&gt; "Dùng agy làm worker để tạo module auth_jwt.py, test kỹ rồi báo kết quả cho tôi."</div>
+        <div class="text-slate-200 text-sm font-mono">&gt; "Use agy as a worker to create a RESTful API using FastAPI in the workspace, test it thoroughly, and report the results to me."</div>
       </div>
       <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator#how-to-use-it" target="_blank" class="text-xs font-mono text-accent-cyan hover:underline flex items-center gap-1 whitespace-nowrap">
         View command docs <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
@@ -691,10 +844,184 @@
   </footer>
 
   <!-- ══════════════════════════════════════════════════════════════════
-       SCRIPTS: SIMULATOR & INTERACTIVE EFFECTS
+       SCRIPTS: AUDIO PLAYER, SFX SYNTHESIZER & SIMULATOR
        ══════════════════════════════════════════════════════════════════ -->
   <script>
     lucide.createIcons();
+
+    // ══════════════════════════════════════════════════════════════════
+    // WEB AUDIO API SYNTHESIZER FOR SOUND EFFECTS
+    // ══════════════════════════════════════════════════════════════════
+    const AudioFX = {
+      ctx: null,
+      enabled: true,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      playTone(freq, type = 'sine', duration = 0.12, gain = 0.08) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          g.gain.setValueAtTime(gain, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      },
+      dispatch() {
+        this.playTone(440, 'sine', 0.1, 0.12);
+        setTimeout(() => this.playTone(880, 'sine', 0.15, 0.12), 100);
+      },
+      split() {
+        this.playTone(320, 'triangle', 0.2, 0.1);
+      },
+      work() {
+        this.playTone(650, 'sawtooth', 0.08, 0.05);
+      },
+      verify() {
+        this.playTone(523.25, 'sine', 0.12, 0.12);
+        setTimeout(() => this.playTone(659.25, 'sine', 0.12, 0.12), 100);
+        setTimeout(() => this.playTone(783.99, 'sine', 0.2, 0.15), 200);
+      },
+      pass() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.3, 0.15), i * 90);
+        });
+      }
+    };
+
+    function toggleSFX() {
+      AudioFX.enabled = !AudioFX.enabled;
+      const statusText = document.getElementById('sfx-status');
+      const icon = document.getElementById('sfx-icon');
+      if (AudioFX.enabled) {
+        statusText.innerText = 'Sound ON';
+        icon.className = 'w-3.5 h-3.5 text-emerald-400';
+        AudioFX.dispatch();
+      } else {
+        statusText.innerText = 'Sound OFF';
+        icon.className = 'w-3.5 h-3.5 text-slate-500';
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // DEDICATED NARRATION AUDIO PLAYER
+    // ══════════════════════════════════════════════════════════════════
+    const narrationAudio = document.getElementById('global-narration-audio');
+    const audioPlayBtn = document.getElementById('audio-play-btn');
+    const audioIcon = document.getElementById('audio-icon');
+    const audioTime = document.getElementById('audio-time');
+    const audioProgressBar = document.getElementById('audio-progress-bar');
+    const audioEq = document.getElementById('audio-eq');
+
+    function toggleAudio() {
+      if (!narrationAudio) return;
+      if (narrationAudio.paused) {
+        narrationAudio.play();
+        audioIcon.setAttribute('data-lucide', 'pause');
+        audioPlayBtn.classList.add('ring-4', 'ring-emerald-500/30');
+        audioEq.classList.remove('opacity-40');
+        audioEq.classList.add('opacity-100');
+        Array.from(audioEq.children).forEach(bar => bar.classList.add('animate-equalizer'));
+      } else {
+        narrationAudio.pause();
+        audioIcon.setAttribute('data-lucide', 'play');
+        audioPlayBtn.classList.remove('ring-4', 'ring-emerald-500/30');
+        audioEq.classList.add('opacity-40');
+        audioEq.classList.remove('opacity-100');
+        Array.from(audioEq.children).forEach(bar => bar.classList.remove('animate-equalizer'));
+      }
+      lucide.createIcons();
+    }
+
+    if (narrationAudio) {
+      narrationAudio.addEventListener('timeupdate', () => {
+        const cur = narrationAudio.currentTime;
+        const dur = narrationAudio.duration || 30;
+        const pct = (cur / dur) * 100;
+        audioProgressBar.style.width = `${pct}%`;
+        const curMin = Math.floor(cur / 60);
+        const curSec = Math.floor(cur % 60).toString().padStart(2, '0');
+        const durMin = Math.floor(dur / 60);
+        const durSec = Math.floor(dur % 60).toString().padStart(2, '0');
+        audioTime.innerText = `${curMin}:${curSec} / ${durMin}:${durSec}`;
+      });
+
+      narrationAudio.addEventListener('ended', () => {
+        audioIcon.setAttribute('data-lucide', 'play');
+        audioPlayBtn.classList.remove('ring-4', 'ring-emerald-500/30');
+        audioEq.classList.add('opacity-40');
+        audioProgressBar.style.width = '0%';
+        lucide.createIcons();
+      });
+    }
+
+    function seekAudioProgress(e) {
+      if (!narrationAudio) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const pct = clickX / width;
+      narrationAudio.currentTime = pct * (narrationAudio.duration || 30);
+      if (narrationAudio.paused) {
+        toggleAudio();
+      }
+    }
+
+    // Video Play & Chapter Seek
+    function playVideoUnmuted() {
+      const player = document.getElementById('remotion-video-player');
+      const overlay = document.getElementById('video-play-overlay');
+      if (player) {
+        player.muted = false;
+        player.volume = 1.0;
+        player.play();
+        if (overlay) overlay.classList.add('hidden');
+      }
+    }
+
+    function seekVideo(seconds) {
+      const player = document.getElementById('remotion-video-player');
+      const overlay = document.getElementById('video-play-overlay');
+      if (player) {
+        player.currentTime = seconds;
+        player.muted = false;
+        player.volume = 1.0;
+        player.play();
+        if (overlay) overlay.classList.add('hidden');
+      }
+    }
+
+    const videoPlayer = document.getElementById('remotion-video-player');
+    const videoOverlay = document.getElementById('video-play-overlay');
+    if (videoPlayer) {
+      videoPlayer.addEventListener('play', () => {
+        if (videoOverlay) videoOverlay.classList.add('hidden');
+      });
+      videoPlayer.addEventListener('pause', () => {
+        if (videoPlayer.currentTime < 1 || videoPlayer.ended) {
+          if (videoOverlay) videoOverlay.classList.remove('hidden');
+        }
+      });
+      videoPlayer.addEventListener('ended', () => {
+        if (videoOverlay) videoOverlay.classList.remove('hidden');
+      });
+    }
 
     // Spotlight cursor effect
     document.querySelectorAll('.spotlight-card').forEach(card => {
@@ -782,6 +1109,7 @@
       navigator.clipboard.writeText(textToCopy).then(() => {
         const btnText = document.getElementById('copy-btn-text');
         btnText.innerText = 'Copied!';
+        AudioFX.dispatch();
         setTimeout(() => {
           btnText.innerText = 'Copy';
         }, 2000);
@@ -789,12 +1117,13 @@
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // LIVE SIMULATOR ENGINE
+    // LIVE SIMULATOR ENGINE WITH SYNTH SFX
     // ══════════════════════════════════════════════════════════════════
     let isRunning = false;
     async function runSimulation() {
       if (isRunning) return;
       isRunning = true;
+      const taskPreset = document.getElementById('sim-task-preset').value;
       const workerKind = document.getElementById('sim-worker').value;
       const isIsolation = document.getElementById('sim-isolation').checked;
       const logBox = document.getElementById('sim-log-output');
@@ -802,12 +1131,20 @@
       const diffBox = document.getElementById('sim-diff-box');
       const runBtn = document.getElementById('sim-run-btn');
 
+      const taskNames = {
+        fastapi: 'Create RESTful FastAPI service with validation & tests',
+        auth: 'Implement JWT Auth Module with refresh token middleware',
+        refactor: 'Migrate sync DB connection pool to AsyncSQL with pooling',
+      };
+      const taskId = 'TASK-108';
+
+      AudioFX.dispatch();
       runBtn.disabled = true;
       runBtn.classList.add('opacity-50', 'cursor-not-allowed');
       diffBox.classList.add('hidden');
       logBox.innerHTML = '';
 
-      const appendLog = (html, delay = 600) => {
+      const appendLog = (html, delay = 500) => {
         return new Promise(resolve => {
           setTimeout(() => {
             logBox.innerHTML += `<div>${html}</div>`;
@@ -839,44 +1176,48 @@
       setStep('step-verifying', false);
       setStep('step-passed', false);
 
-      await appendLog(`<span class="text-brand-400 font-bold">orchestrator</span> <span class="text-emerald-400">❯</span> Initializing task <span class="text-white">TASK-108</span>...`, 200);
-      await appendLog(`<span class="text-slate-400">Writing .agents/tasks/TASK-108.json (state: pending)</span>`, 400);
+      await appendLog(`<span class="text-brand-400 font-bold">orchestrator</span> <span class="text-emerald-400">❯</span> Initializing task <span class="text-white">${taskId}</span>: "${taskNames[taskPreset]}"...`, 200);
+      await appendLog(`<span class="text-slate-400">Writing .agents/tasks/${taskId}.json (status: pending, isolation: ${isIsolation ? 'worktree' : 'none'})</span>`, 350);
 
       if (isIsolation) {
-        await appendLog(`<span class="text-cyan-300">🔒 [Isolation] Creating git worktree at .worktrees/TASK-108 (branch task/TASK-108)...</span>`, 500);
+        await appendLog(`<span class="text-cyan-300">🔒 [Isolation] Creating dedicated git worktree at .worktrees/${taskId} (branch task/${taskId})...</span>`, 450);
       }
 
       setStep('step-pending', false, true);
       setStep('step-working', true);
       stateBadge.innerText = 'WORKING';
       stateBadge.className = 'px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30 text-[10px] font-bold uppercase';
+      AudioFX.split();
 
       // Step 2: Pane split & agent launch
-      await appendLog(`<span class="text-cyan-300">⚡ [Herdr] herdr pane split --current --cwd "${isIsolation ? '.worktrees/TASK-108' : 'workspace'}" ➔ w1X:p2</span>`, 600);
-      await appendLog(`<span class="text-amber-300">⚡ [Herdr] herdr agent start worker_${workerKind}_1 --kind ${workerKind} -- --dangerously-skip-permissions</span>`, 600);
-      await appendLog(`<span class="text-slate-300">⚡ [Herdr] Sending prompt with delivery marker confirmation...</span>`, 700);
+      await appendLog(`<span class="text-cyan-300">⚡ [Herdr] herdr pane split --current --cwd "${isIsolation ? `.worktrees/${taskId}` : 'workspace'}" ➔ w1X:p2</span>`, 500);
+      await appendLog(`<span class="text-amber-300">⚡ [Herdr] herdr agent start worker_${workerKind}_1 --kind ${workerKind} -- --dangerously-skip-permissions</span>`, 500);
+      await appendLog(`<span class="text-slate-300">⚡ [Herdr] Sending prompt with "In absolute directory" marker confirmation...</span>`, 600);
 
       // Simulation of working
-      await appendLog(`<span class="text-emerald-400 font-mono">● ${workerKind}: Writing module files &amp; executing test suite...</span>`, 900);
-      await appendLog(`<span class="text-slate-400">Worker settled clean (status: idle / done, delivery confirmed).</span>`, 800);
+      AudioFX.work();
+      await appendLog(`<span class="text-emerald-400 font-mono">● worker_${workerKind}_1: Writing module implementation &amp; running tests...</span>`, 800);
+      await appendLog(`<span class="text-slate-400">Worker settled (status: idle / done, transcript marker delivery confirmed).</span>`, 700);
 
       setStep('step-working', false, true);
       setStep('step-verifying', true);
       stateBadge.innerText = 'VERIFYING';
       stateBadge.className = 'px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple border border-accent-purple/30 text-[10px] font-bold uppercase';
+      AudioFX.verify();
 
       // Step 3: Diff-based Review
-      await appendLog(`<span class="text-purple-300">🔍 [Reviewer Subagent] Inspecting actual git diff (ignoring worker self-reports)...</span>`, 700);
+      await appendLog(`<span class="text-purple-300">🔍 [Reviewer Subagent] Inspecting actual git diff (ignoring worker self-reports)...</span>`, 600);
       diffBox.classList.remove('hidden');
-      await appendLog(`<span class="text-emerald-300 font-semibold">✔ [Reviewer] Tests passed 6/6. No syntax regressions.</span>`, 700);
+      await appendLog(`<span class="text-emerald-300 font-semibold">✔ [Reviewer] Test suite passed 8/8. Zero lint/syntax regressions found.</span>`, 600);
 
       // Step 4: Passed
       setStep('step-verifying', false, true);
       setStep('step-passed', false, true);
       stateBadge.innerText = 'PASSED';
       stateBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase';
+      AudioFX.pass();
 
-      await appendLog(`<span class="text-emerald-400 font-bold">🎉 TASK-108 VERDICT: PASSED. Updated .agents/state.json.</span>`, 500);
+      await appendLog(`<span class="text-emerald-400 font-bold">🎉 ${taskId} VERDICT: PASSED. Updated .agents/state.json &amp; merged cleanly.</span>`, 400);
 
       runBtn.disabled = false;
       runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
