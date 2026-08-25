@@ -1,396 +1,131 @@
 # herdr-worker-orchestrator
 
-[![Website](https://img.shields.io/badge/Website-Live%20Showcase-6366f1?style=for-the-badge&logo=google-chrome&logoColor=white)](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)
-[![Version](https://img.shields.io/badge/version-0.5.0-06b6d4?style=for-the-badge)](https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/releases)
-[![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)](LICENSE)
+[![Website](https://img.shields.io/badge/Live_Showcase-6366f1?style=flat-square&logo=google-chrome&logoColor=white)](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)
+[![Version](https://img.shields.io/badge/v0.5.0-06b6d4?style=flat-square)](https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/releases)
+[![License](https://img.shields.io/badge/MIT-10b981?style=flat-square)](LICENSE)
 
-> 🌐 **Live Showcase & Interactive Simulator:** [anhnd3005-infinity.github.io/herdr-worker-orchestrator](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)
-
-Claude Code as orchestrator, CLI agent workers of any
-[Herdr](https://herdr.dev)-supported kind (`agy`, `codex`, and in principle
-any other kind Herdr recognizes) running interactively inside
-Herdr-managed panes — coordinated through a **stateful** `.agents/` ledger
-with task tracking, worker isolation via `git worktree`, and diff-based
-review. Claude clarifies scope before dispatching, always self-checks a
-worker's output directly against real files (never trusts a status code
-alone), and only spins up an independent reviewer for tasks that meet a
-stated importance bar.
+**Claude Code** orchestrates. **Herdr** manages terminals. Isolated **workers** (agy, codex, etc.) write code in git worktrees with automated diff review.
 
 ```
-Claude (orchestrator)
-   ↓
-Herdr (pane/agent layer)
-   ↓
-Worker (isolated or shared)
- ├── agy
- ├── codex
- └── ... (any Herdr-supported kind)
+Claude Code (orchestrator)  →  Herdr (terminal layer)  →  Workers (isolated)
 ```
 
-## Requirements
+## Install
 
-- [Claude Code](https://claude.com/claude-code), **running inside a
-  Herdr-managed pane** (see step 1 — this is the one thing people miss)
-- **Herdr** itself
-- At least one worker CLI: **`agy`**, **`codex`**, or another kind `herdr
-  agent` supports
+### Prerequisites
 
-## Quick install
+- [Herdr](https://herdr.dev) — Claude Code must run **inside** a Herdr pane (`HERDR_ENV=1`)
+- [Claude Code](https://claude.com/claude-code)
+- A worker CLI: `agy`, `codex`, or any Herdr-supported kind
 
-### 1. Install Herdr, then run Claude Code *inside* it
+### Plugin Setup
 
-Herdr is a hard prerequisite — the skill checks `HERDR_ENV=1` before doing
-anything and refuses to run outside a Herdr-managed pane. Installing Herdr
-is not enough by itself: **Claude Code has to actually be running inside a
-pane Herdr created**, not a plain terminal.
-
-**macOS (Homebrew — official core formula):**
-```bash
-brew install herdr
-brew services start herdr        # keep it running in the background, or:
-/opt/homebrew/opt/herdr/bin/herdr server   # run it directly, no service
-```
-
-**Other platforms:** see [herdr.dev](https://herdr.dev) for the current
-Linux/Windows install steps (not independently verified from this machine,
-so no exact command is claimed here).
-
-Then open/attach a Herdr session and start Claude Code **from inside one of
-its panes** — e.g. Herdr's own UI, or `herdr session attach <name>`.
-
-✅ **Verify before moving on:**
-```bash
-herdr --version
-echo "$HERDR_ENV"    # must print 1
-```
-If `$HERDR_ENV` is empty, you're in a plain terminal, not a Herdr pane —
-nothing past this point will work until that's fixed.
-
-### 2. Install the worker CLI(s) you'll dispatch to
-
-```bash
-# agy (Antigravity CLI, Google)
-curl -fsSL https://antigravity.google/cli/install.sh | bash        # macOS/Linux
-irm https://antigravity.google/cli/install.ps1 | iex                # Windows PowerShell
-curl -fsSL https://antigravity.google/cli/install.cmd -o install.cmd && install.cmd && del install.cmd  # Windows CMD
-```
-
-For `codex` or any other kind, install it per its own docs.
-
-✅ **Verify:**
-```bash
-agy --help                # or the equivalent for your kind
-herdr agent               # kinds line should list what you installed
-```
-
-On **Windows**, the dispatch script has a pure-Python twin
-(`dispatch-herdr-worker.py`) — no WSL or Git Bash needed just for this
-plugin.
-
-### 3. Install the plugin
-
-You can install this plugin in **Claude Code**, natively in **Herdr**, or **both**:
-
-#### Option A: In Claude Code (Agent Skill / Plugin)
-
+**Claude Code:**
 ```
 /plugin marketplace add https://github.com/anhnd3005-infinity/herdr-worker-orchestrator.git
 /plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
 ```
 
-Repo is **public** — no SSH key, no GitHub login needed. (SSH also works if
-preferred: `git@github.com:anhnd3005-infinity/herdr-worker-orchestrator.git`.)
-
-✅ **Verify in Claude Code:**
-```
-/plugin
-```
-should list `herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace` as enabled.
-Works from **any** project on the machine, not just this repo.
-
-#### Option B: Natively in Herdr (Workflow Plugin)
-
-Install straight from GitHub:
+**Herdr CLI:**
 ```bash
 herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator
 ```
 
-Or link locally for development / local usage:
-```bash
-herdr plugin link /path/to/herdr-worker-orchestrator
-```
-
-✅ **Verify in Herdr:**
-```bash
-herdr plugin list
-herdr plugin action list --plugin herdr-worker-orchestrator
-```
-
-### Updating later
-
-**For Claude Code:**
-```
-/plugin marketplace update
-/plugin update herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace
-```
-
-**For Herdr:**
-```bash
-# If installed from GitHub:
-herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator --force
-# If linked locally: git pull is enough
-```
-
-### You're set up. Try it:
-
-> "Use agy as a worker to create a RESTful API using FastAPI in the workspace, thoroughly test it, and report the results back to me."
-
-Claude will ask a clarifying question first if anything about scope, style,
-"done", or which kind is ambiguous — that's expected, not a bug.
-
-## How to use it
-
-### In Claude Code
-
-No slash command required — this is a **skill**, Claude pulls it in
-automatically when a request matches. Just ask normally:
-
-> "Dispatch this to a codex worker via Herdr, then self-check the results."
-
-To force it explicitly instead of relying on auto-match:
-
-```
-/herdr-dispatch Create a RESTful FastAPI service using agy, test it thoroughly, and report the results.
-```
-
-Add "important" in the task text to force an independent
-reviewer subagent regardless of the normal importance-bar check.
-
-### In Herdr CLI
-
-Invoke plugin actions directly from your terminal:
+### Verify
 
 ```bash
-# 1. View live orchestration status (active tasks, live agent states, verification)
-herdr plugin action invoke herdr-worker-orchestrator.status
-
-# 2. Check and resume in-progress tasks after a restart/session crash
-herdr plugin action invoke herdr-worker-orchestrator.resume
-
-# 3. Inspect plugin action execution logs
-herdr plugin log list --plugin herdr-worker-orchestrator
+herdr --version
+echo "$HERDR_ENV"   # must print 1
 ```
 
-Read `skills/dispatching-to-herdr-workers/SKILL.md` for the full process —
-one file, worth reading end to end once.
+## Usage
 
-## How it works
+Just ask Claude naturally — the skill activates automatically:
+
+> "Use agy as a worker to create a RESTful API using FastAPI, test it thoroughly, and report the results."
+
+Or force it explicitly:
+```
+/herdr-dispatch Create a FastAPI service using agy, test it, and report results.
+```
+
+**Herdr CLI actions:**
+```bash
+herdr plugin action invoke herdr-worker-orchestrator.status   # live status
+herdr plugin action invoke herdr-worker-orchestrator.resume   # resume after crash
+```
+
+## How It Works
+
 ![AI Coding Workflow](./ai_coding_workflow_animated.gif)
 
+### 3-Layer Architecture
 
-*(Under the hood, "dispatch" and "checks the real files" are each a small
-sequence of `herdr pane`/`herdr agent` calls with retries and a ledger
-written to `.agents/` — see the full step-by-step process in `SKILL.md` if
-you want that detail.)*
+| Layer | Role | Component |
+|-------|------|-----------|
+| 1. Cognitive | Plans, decomposes, reviews | Claude Code |
+| 2. Process | Terminal supervision, lifecycle polling | Herdr |
+| 3. Execution | Writes code in isolation | agy / codex / any CLI |
 
-**The rules that matter most:**
-1. **Never trust a status code alone.** Real dispatches caught `agy`
-   reporting success while writing to the wrong directory, a fresh pane
-   returning `agent_pane_busy`, and `agent_prompt_stalled` firing even when
-   the prompt had actually landed — every one only caught by checking the
-   real file or pane transcript. Self-check is never skippable, even when
-   the reviewer subagent is.
-2. Asking "what do you mean by simple" costs one message. Discovering the
-   worker overshot scope costs a whole dispatch cycle. Clarify first.
-3. **A worker kind is only as trusted as its track record.** `agy` has
-   several real dispatches behind it; `codex` or any other kind is new
-   integration surface the first time you use it — treat its first
-   dispatch like a new task type, not a known quantity.
-
-## State machine & resume
-
-v0.5.0 introduces a **stateful task ledger** in `.agents/`. Each dispatched
-task gets a JSON file in `.agents/tasks/` with a well-defined status
-lifecycle:
+### Task Lifecycle
 
 ```
 pending → dispatching → working → verifying → passed
                 ↓           ↓         ↓
               failed     blocked    failed
-                           ↓
-                        resolved → verifying → ...
 ```
 
-If Claude restarts mid-orchestration, it reads `.agents/state.json` and
-the task files to find any `working`/`dispatching`/`blocked` tasks, inspects
-their Herdr agents, and resumes — no state is lost to compaction or
-session restart.
+Tasks are persisted in `.agents/tasks/TASK-xxx.json`. If Claude restarts, it reads the ledger and resumes — no state lost.
 
-See `SKILL.md` § "State Machine & Resume" for the full schema and flow.
+### Worker Isolation
 
-## Worker isolation
-
-By default, workers run in the same working directory as Claude. For tasks
-that touch shared/production code, v0.5.0 adds **git worktree isolation**:
+Workers run in dedicated git worktrees on separate branches:
 
 ```
-Project
+Project/
 ├── main worktree        ← Claude works here
-├── .worktrees/TASK-001  ← Worker 1 (isolated)
-└── .worktrees/TASK-002  ← Worker 2 (isolated)
+├── .worktrees/TASK-001  ← Worker 1 (agy)
+└── .worktrees/TASK-002  ← Worker 2 (codex)
 ```
 
-Enable with `--isolation worktree` on the dispatch scripts. The worker gets
-its own branch, and after verification the orchestrator merges the diff
-back. This makes parallel dispatch safe and prevents workers from
-accidentally breaking Claude's working tree.
+## Key Design Principles
 
-See `SKILL.md` § "Worker Isolation" for the full flow.
+1. **Never trust status codes alone.** Always inspect actual files and diffs.
+2. **Clarify before dispatching.** One clarifying question saves a wasted dispatch cycle.
+3. **Reviewers inspect `git diff`, not worker reports.** Workers can hallucinate success.
+4. **`stalled ≠ failed`.** Check terminal transcripts for delivery markers before retrying.
+5. **`--dangerously-skip-permissions`** injected automatically to prevent interactive hangs.
 
-## Known gotchas
+## Known Gotchas
 
-- **No Herdr session → nothing works.** `HERDR_ENV` must be `1`. There is
-  no headless fallback.
-- **`agy` needs `--add-dir`; other kinds might not.** Handled by a small
-  per-kind quirks table in the dispatch scripts — `codex` needs nothing
-  extra (reasoned about, not yet dispatch-verified).
-- **`--timeout` is capped at 300000 ms (5 min) per call**, hard-rejected
-  above that. For longer tasks, loop `herdr agent wait <name> --timeout
-  300000` after dispatch instead of raising the number. Exit code `3` means
-  exactly this: still working past the timeout, not a failure.
-- **`agent_pane_busy` and `agent_prompt_stalled`** can fire right after
-  `pane split`/`agent start` even when nothing is actually wrong — both
-  scripts retry, and cross-check the real pane transcript before trusting
-  any status. Don't hand-roll the `herdr` sequence without one of them.
-- **`agent_prompt_stalled` is UNKNOWN, not FAIL.** This status means the
-  prompt *may or may not* have been delivered — it's a heuristic, not a
-  reliable signal. The correct handling is:
-  ```
-  agent_prompt_stalled
-         ↓
-      UNKNOWN
-         ↓
-    herdr agent get + herdr agent read
-         ↓
-    inspect transcript for prompt text
-       /       \
-     YES       NO
-      │         │
-    WAIT      RETRY
-    (task      (prompt never
-    started)   delivered)
-  ```
-  The dispatch scripts already implement this flow (retry + marker check).
-  Never short-circuit to FAIL on `agent_prompt_stalled` alone.
-- **`done` is not safer to trust than `idle`.** Both are "settled" states
-  and both have independently produced a false-positive (settled + zero
-  error + completely empty pane). The delivery-marker check covers both.
-- **Don't drop `--wait`** to dodge a flaky stall error — tested live to be
-  worse: herdr reports success immediately with zero signal that delivery
-  actually failed.
-- **herdr writes errors to stderr, not stdout** — easy to miss when
-  scripting your own `herdr` calls.
-- **Naive string checks during self-check can false-negative** on content
-  split across HTML tags or wrapped terminal lines. Check meaning, not raw
-  substrings.
-- **A worker doing exactly what it was told can still overshoot intent.**
-  That's a step-0 (clarify first) problem, not a step-4 (self-check) one.
-- **Reviewers must review the diff, not the worker's report.** A worker
-  can report success while having produced wrong output, or can accurately
-  describe what it did while having done the wrong thing. The reviewer's
-  job is `git diff` + actual file inspection + tests/build — never just
-  re-reading the worker's `progress.md`.
+- `HERDR_ENV` must be `1` — no headless fallback
+- `--timeout` capped at 300,000ms (5 min); loop `herdr agent wait` for longer tasks
+- `agent_prompt_stalled` is **UNKNOWN**, not FAIL — inspect transcript, then decide wait vs retry
+- Herdr writes errors to **stderr**, not stdout
 
-Full history and exact repro steps for each of these: `skills/
-dispatching-to-herdr-workers/SKILL.md`'s "Lessons from real dispatches" log.
+## Project Structure
 
-## What's in here
+```
+skills/dispatching-to-herdr-workers/
+├── SKILL.md                        # Full process documentation
+└── scripts/
+    ├── dispatch-herdr-worker.sh    # Bash dispatch wrapper
+    └── dispatch-herdr-worker.py    # Python dispatch wrapper
+commands/herdr-dispatch.md          # Slash command definition
+.agents/                            # Stateful task ledger
+```
 
-- `skills/dispatching-to-herdr-workers/` — the skill: `SKILL.md` (process,
-  per-kind quirks table, review policy, state machine, isolation, full
-  lessons log) + `scripts/dispatch-herdr-worker.sh` / `.py`
-  (behavior-identical dispatch wrappers, bash and pure-Python).
-- `commands/herdr-dispatch.md` — `/herdr-dispatch <task>`, forces the skill
-  instead of relying on auto-match.
-- `.agents/` — stateful task ledger (tasks/, runs/, state.json) plus a
-  real worked-example dispatch kept for reference.
+## Version History
 
-## Why this exists
+| Version | Changes |
+|---------|---------|
+| **0.5.0** | Renamed to herdr-worker-orchestrator. Stateful ledger, git worktree isolation, diff-based review, `stalled=UNKNOWN` handling. |
+| **0.4.1** | Timeout validation, `--wait` drop tested & rejected, delivery-check fix for `done` state. |
+| **0.4.0** | Herdr pane mode (replacing headless), multi-kind support, per-kind quirks table. |
+| **0.3.0** | Cross-platform: pure-Python dispatch port. |
+| **0.2.0** | Clarify-first (step 0), tiered review, `/agy-dispatch` command. |
+| **0.1.0** | Initial skill: `.agents/` ledger, `--add-dir` gotcha, dispatch script. |
 
-`agy plugin install` lets *agy itself* run Superpowers-style skills
-natively. This plugin is the opposite shape: Claude Code stays the
-controller, and dispatches to an external, heterogeneous worker over
-Herdr — useful when you want a different CLI's models/cost profile doing
-execution while Claude coordinates and reviews. Doesn't require Superpowers
-either way.
+## License
 
-**Note on cost:** not automatically cheaper than asking Claude directly — a
-trivial task can cost *more* total tokens across both providers (measured:
-~150k tokens on the agy side for a "create hello.py" smoke test). What it
-does is shift execution-heavy work off Claude's metered usage onto a
-separate provider's quota — a budget-allocation tool, not a
-total-cost-reduction one.
-
-## Worked examples
-
-Real dispatches, kept as evidence:
-
-**1. `hello.py` smoke test** (this repo). First-ever dispatch, headless
-era. Attempt 1 silently wrote to agy's scratch dir despite reporting
-success; attempt 2 (with `--add-dir`) worked and was independently
-verified. Produced the `--add-dir` quirk and the ledger convention.
-
-**2. `helloworld-tabs-demo`** (a separate project). Asked for "a simple helloworld website." Dispatched without clarifying "simple" first (a
-mistake — added step 0 to the process); agy delivered a full
-"Premium Dark & Glassmorphism" site, accurate to the letter, well beyond
-intended spirit. `grep -i "hello world"` false-negatived on text split
-across an HTML tag — manual check found it. Human chose to keep the
-over-delivered design; independent reviewer skipped since a human looked
-directly.
-
-**3. Herdr-pane migration smoke tests** (`workspace4`–`workspace9`,
-cleaned up after). Six live dispatches pressure-testing the new pane mode:
-caught `agent_prompt_stalled` producing a false-positive `idle` status,
-`agent_pane_busy` right after pane split, herdr writing errors to stderr
-(missed by a stdout-only capture), and `agent_prompt_stalled` firing on all
-4 retries once even though the task had genuinely completed. Final run:
-fully automatic, correct file, correct exit code.
-
-**4. Doc-driven optimization pass** (2026-08-14). Read
-[herdr.dev/docs/agent-automation](https://herdr.dev/docs/agent-automation/)
-and tested every idea before adopting it: shipped `--timeout` bounds
-validation; tested and *rejected* dropping `--wait` (made delivery
-detection strictly worse, confirmed live); found a new `timeout`/queued-
-prompt error distinct from `agent_prompt_stalled`; caught and fixed a
-self-inflicted regression where a delivery-check fix only covered `idle`
-and let the identical bug back through under `done`.
-
-All of the above are captured in `SKILL.md`'s "Lessons from real
-dispatches" log, so the next dispatch starts from what these already
-learned.
-
-## Version history
-
-- **0.5.0** — renamed from `agy-orchestrator` to `herdr-worker-orchestrator`
-  to reflect the real architecture (Claude → Herdr → any worker kind);
-  stateful `.agents/` ledger with task JSON files and resume-on-restart;
-  `git worktree` isolation mode for safe parallel dispatch; enforced
-  diff-based review (reviewer inspects `git diff` + actual files, never
-  trusts worker report); explicit `agent_prompt_stalled` = UNKNOWN framing
-  with inspect-then-decide flow.
-- **0.4.1** — doc-driven optimization pass (see Worked example 4): timeout
-  bounds validation + new `working` exit code (`3`), `--wait`-dropping
-  tested and rejected, new `timeout` error documented, `idle`-only
-  delivery-check regression found and fixed to cover `done` too.
-- **0.4.0** — replaced headless `agy --print` with Herdr-managed
-  interactive panes (lifecycle polling, follow-up prompts, live approval
-  instead of `--dangerously-skip-permissions`); fixed 3 real races via live
-  smoke testing; generalized from agy-only to any Herdr-supported kind via
-  a per-kind native-args table; renamed `dispatching-to-agy-workers` →
-  `dispatching-to-herdr-workers`, `/agy-dispatch` → `/herdr-dispatch`.
-- **0.3.0** — cross-platform dispatch: pure-Python port, no WSL/Git Bash
-  required just for this plugin.
-- **0.2.0** — step 0 (clarify before dispatching), tiered review policy,
-  `/agy-dispatch` slash command.
-- **0.1.0** — initial skill: `.agents/` ledger convention, `--add-dir`
-  gotcha, mandatory reviewer, dispatch script, self-hosted marketplace.
+MIT — [Đức Anh](https://github.com/anhnd3005-infinity) @ Infinity Tech
