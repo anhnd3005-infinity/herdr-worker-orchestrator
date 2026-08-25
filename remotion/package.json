@@ -1,0 +1,23 @@
+{
+  "name": "herdr-worker-orchestrator-video",
+  "version": "0.5.0",
+  "description": "Programmatic motion graphics showcase video for Herdr Worker Orchestrator powered by Remotion",
+  "private": true,
+  "scripts": {
+    "start": "remotion preview src/index.ts",
+    "build": "remotion render src/index.ts MainVideo out/video.mp4",
+    "build-webm": "remotion render src/index.ts MainVideo out/video.webm --codec=vp8",
+    "thumbnail": "remotion still src/index.ts MainVideo out/thumbnail.png --frame=150"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.218",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.218"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  }
+}

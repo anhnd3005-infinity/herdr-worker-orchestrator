@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Herdr Worker Orchestrator — Orchestrate AI CLI Agents with Precision</title>
-  <meta name="description" content="Claude Code as the orchestrator. Herdr as the terminal layer. Multi-agent CLI execution (agy, codex) with stateful ledger, git worktree isolation, and diff-based review.">
+  <title>Herdr Worker Orchestrator — Next-Gen AI Agent Orchestration</title>
+  <meta name="description" content="Orchestrate autonomous AI CLI agents (agy, codex, ...) with Claude Code as the brain, Herdr as the persistent terminal layer, git worktree isolation, and diff-based review.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 
-  <!-- Google Fonts -->
+  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -37,27 +37,31 @@
               purple: '#a855f7',
               emerald: '#10b981',
               amber: '#f59e0b',
+              rose: '#f43f5e',
             },
-            surface: {
-              bg: '#07090e',
-              card: '#0e131f',
-              border: '#1e293b',
-              hover: '#182234',
+            dark: {
+              950: '#030712',
+              900: '#0b0f19',
+              850: '#0e1424',
+              800: '#151d30',
+              700: '#1e293b',
+              border: '#1f293d',
             }
           },
           animation: {
-            'glow-pulse': 'glowPulse 6s ease-in-out infinite alternate',
-            'float': 'float 4s ease-in-out infinite',
-            'scanline': 'scanline 8s linear infinite',
+            'glow-pulse': 'glowPulse 8s ease-in-out infinite alternate',
+            'float': 'float 5s ease-in-out infinite',
+            'spin-slow': 'spin 12s linear infinite',
+            'border-beam': 'borderBeam 4s linear infinite',
           },
           keyframes: {
             glowPulse: {
-              '0%': { opacity: '0.3', transform: 'scale(0.95)' },
-              '100%': { opacity: '0.6', transform: 'scale(1.05)' },
+              '0%': { opacity: '0.25', transform: 'scale(0.95)' },
+              '100%': { opacity: '0.55', transform: 'scale(1.08)' },
             },
             float: {
               '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-8px)' },
+              '50%': { transform: 'translateY(-10px)' },
             }
           }
         }
@@ -69,452 +73,568 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    /* Custom Glow & Glass */
-    .glass-card {
-      background: rgba(14, 19, 31, 0.7);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+    /* Custom Glass & Spotlight Effects */
+    .spotlight-card {
+      position: relative;
+      background: rgba(14, 20, 36, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1.25rem;
+      overflow: hidden;
+      transition: all 0.3s ease;
     }
-    .glass-card:hover {
-      border-color: rgba(99, 102, 241, 0.3);
-      box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15);
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      top: var(--mouse-y, -1000px);
+      left: var(--mouse-x, -1000px);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
     }
-    .code-gradient {
-      background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(6,182,212,0.05) 100%);
+    .spotlight-card:hover::before {
+      opacity: 1;
     }
-    .text-gradient {
-      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+    .spotlight-card:hover {
+      border-color: rgba(99, 102, 241, 0.35);
+      box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Gradients */
+    .text-gradient-hero {
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #818cf8 80%, #06b6d4 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .text-gradient-purple {
-      background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #06b6d4 100%);
+      background: linear-gradient(135deg, #c084fc 0%, #818cf8 50%, #38bdf8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .bg-grid {
-      background-size: 40px 40px;
+    .bg-grid-pattern {
+      background-size: 48px 48px;
       background-image: 
         linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+
+    /* Badge glow */
+    .badge-glow {
+      box-shadow: 0 0 20px -2px rgba(99, 102, 241, 0.4);
     }
-    ::-webkit-scrollbar-track {
-      background: #07090e;
+
+    /* Terminal scroll */
+    .terminal-scroll::-webkit-scrollbar {
+      width: 6px;
     }
-    ::-webkit-scrollbar-thumb {
+    .terminal-scroll::-webkit-scrollbar-thumb {
       background: #1e293b;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
+      border-radius: 3px;
     }
   </style>
 </head>
 
-<body class="bg-surface-bg text-slate-300 font-sans antialiased selection:bg-brand-500 selection:text-white relative overflow-x-hidden min-h-screen">
+<body class="bg-dark-950 text-slate-300 font-sans antialiased selection:bg-brand-500 selection:text-white relative overflow-x-hidden min-h-screen">
 
-  <!-- Background Ambient Glow -->
+  <!-- Interactive Canvas Background -->
+  <canvas id="ambient-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+  <!-- Ambient Light Orbs -->
   <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-brand-600/15 rounded-full blur-[140px] animate-glow-pulse"></div>
-    <div class="absolute top-[30%] right-[-5%] w-[500px] h-[500px] bg-accent-cyan/10 rounded-full blur-[140px] animate-glow-pulse" style="animation-delay: -3s;"></div>
-    <div class="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] bg-accent-purple/10 rounded-full blur-[140px]"></div>
-    <div class="absolute inset-0 bg-grid"></div>
+    <div class="absolute top-[-15%] left-[25%] w-[650px] h-[650px] bg-brand-600/15 rounded-full blur-[150px] animate-glow-pulse"></div>
+    <div class="absolute top-[40%] right-[-10%] w-[550px] h-[550px] bg-accent-cyan/10 rounded-full blur-[150px] animate-glow-pulse" style="animation-delay: -4s;"></div>
+    <div class="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-accent-purple/10 rounded-full blur-[160px]"></div>
+    <div class="absolute inset-0 bg-grid-pattern"></div>
+  </div>
+
+  <!-- Top Announcement Banner -->
+  <div class="relative z-50 bg-gradient-to-r from-brand-900/60 via-dark-900 to-accent-cyan/20 border-b border-white/5 py-2 px-4 text-center text-xs font-medium text-slate-300 flex items-center justify-center gap-2">
+    <span class="px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] font-mono font-bold uppercase tracking-wider">v0.5.0 Released</span>
+    <span>Full state machine ledger, git worktree isolation &amp; dual Herdr + Claude support.</span>
+    <a href="#installation" class="text-accent-cyan hover:underline font-semibold ml-1 inline-flex items-center gap-1">
+      Install Now <i data-lucide="arrow-right" class="w-3 h-3"></i>
+    </a>
   </div>
 
   <!-- Navbar -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-surface-bg/80 border-b border-surface-border/60">
+  <header class="sticky top-0 z-50 backdrop-blur-2xl bg-dark-950/80 border-b border-white/5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan flex items-center justify-center shadow-lg shadow-brand-500/20 font-mono font-bold text-white text-lg">
+      
+      <!-- Brand Logo -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-accent-purple to-accent-cyan flex items-center justify-center shadow-lg shadow-brand-500/25 text-white font-mono font-black text-xl group-hover:scale-105 transition-transform">
           ⚡
         </div>
         <div>
-          <span class="font-bold text-white text-base tracking-tight">herdr-worker-orchestrator</span>
-          <span class="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-semibold">v0.5.0</span>
+          <div class="font-bold text-white text-base tracking-tight flex items-center gap-2">
+            <span>herdr-worker-orchestrator</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-semibold">v0.5.0</span>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono">by Infinity Tech • Duc Anh</div>
         </div>
-      </div>
+      </a>
 
+      <!-- Navigation -->
       <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+        <a href="#playground" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Live Simulator</a>
         <a href="#architecture" class="hover:text-white transition">Architecture</a>
-        <a href="#features" class="hover:text-white transition">Features</a>
-        <a href="#workflow" class="hover:text-white transition">Workflow</a>
-        <a href="#installation" class="hover:text-white transition">Installation</a>
-        <a href="https://herdr.dev/plugins/" target="_blank" class="hover:text-accent-cyan transition flex items-center gap-1">
-          Herdr Plugin <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-        </a>
+        <a href="#superpowers" class="hover:text-white transition">5 Superpowers</a>
+        <a href="#author" class="hover:text-white transition">Author &amp; Team</a>
+        <a href="#installation" class="hover:text-white transition">Quick Start</a>
       </nav>
 
+      <!-- Action Buttons -->
       <div class="flex items-center gap-3">
         <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" 
-           class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl transition shadow-sm hover:border-slate-600">
+           class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900/90 hover:bg-slate-800 border border-white/10 rounded-xl transition shadow-sm hover:border-brand-500/40">
           <i data-lucide="github" class="w-4 h-4"></i>
           <span>GitHub</span>
-          <span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300 font-mono">⭐ Star</span>
+          <span class="text-xs bg-slate-800 px-1.5 py-0.5 rounded text-brand-300 font-mono border border-white/5">★ Star</span>
         </a>
       </div>
     </div>
   </header>
 
   <!-- Hero Section -->
-  <section class="relative pt-20 pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10">
-    <div class="text-center max-w-3xl mx-auto">
+  <section class="relative pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10">
+    <div class="text-center max-w-4xl mx-auto">
       
       <!-- Eyebrow Badge -->
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-8 shadow-inner shadow-brand-500/10">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-8 badge-glow">
         <span class="w-2 h-2 rounded-full bg-accent-cyan animate-ping"></span>
-        <span>Dual Compatibility • Claude Code & Herdr Plugin</span>
+        <span>Deterministic Multi-Agent Runtime Harness</span>
       </div>
 
       <!-- Main Headline -->
-      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-gradient leading-[1.15] mb-6">
-        Orchestrate AI CLI Agents with <span class="text-gradient-purple">Surgical Precision</span>
+      <h1 class="text-4xl sm:text-7xl font-extrabold tracking-tight text-gradient-hero leading-[1.1] mb-6">
+        Orchestrate AI CLI Agents with <span class="text-gradient-purple">Absolute Reliability</span>
       </h1>
 
       <!-- Subtitle -->
-      <p class="text-lg sm:text-xl text-slate-400 font-normal leading-relaxed mb-10">
-        Use <strong>Claude Code</strong> as the high-level brain. Let <strong>Herdr</strong> manage persistent terminal panes. Dispatch heavy coding to <strong>agy</strong>, <strong>codex</strong>, or any CLI agent — with stateful task tracking, git worktree isolation, and diff-based review.
+      <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed mb-10 max-w-3xl mx-auto">
+        Stop letting coding agents hallucinate completion. <strong>Claude Code</strong> coordinates as the high-level brain, <strong>Herdr</strong> runs persistent terminal panes, and isolated workers (<strong>agy, codex</strong>) write code safely with automated diff reviews.
       </p>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="#playground" 
+           class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-accent-cyan hover:from-brand-500 hover:to-accent-cyan shadow-xl shadow-brand-500/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2.5 text-base">
+          <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+          <span>Try Interactive Simulator</span>
+        </a>
         <a href="#installation" 
-           class="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 shadow-xl shadow-brand-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-base">
-          <i data-lucide="terminal" class="w-5 h-5"></i>
-          <span>Get Started in 1-Click</span>
+           class="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-slate-200 bg-dark-850 hover:bg-dark-800 border border-white/10 hover:border-brand-500/40 transition flex items-center justify-center gap-2.5 text-base">
+          <i data-lucide="terminal" class="w-5 h-5 text-accent-cyan"></i>
+          <span>1-Click Install</span>
         </a>
-        <a href="#architecture" 
-           class="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-slate-300 bg-surface-card hover:bg-surface-hover border border-surface-border transition flex items-center justify-center gap-2 text-base">
-          <i data-lucide="network" class="w-5 h-5"></i>
-          <span>Explore Architecture</span>
-        </a>
-      </div>
-
-      <!-- Live Quick Stats -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto pt-4 border-t border-surface-border/50 text-left">
-        <div class="p-3">
-          <div class="text-2xl font-bold font-mono text-white">0%</div>
-          <div class="text-xs text-slate-400 font-medium">State Loss on Restart</div>
-        </div>
-        <div class="p-3">
-          <div class="text-2xl font-bold font-mono text-accent-cyan">100%</div>
-          <div class="text-xs text-slate-400 font-medium">Automated (No Prompts)</div>
-        </div>
-        <div class="p-3">
-          <div class="text-2xl font-bold font-mono text-accent-emerald">Isolated</div>
-          <div class="text-xs text-slate-400 font-medium">Git Worktree Per Task</div>
-        </div>
-        <div class="p-3">
-          <div class="text-2xl font-bold font-mono text-accent-purple">Any CLI</div>
-          <div class="text-xs text-slate-400 font-medium">agy, codex, gemini...</div>
-        </div>
       </div>
 
     </div>
 
-    <!-- Animated Terminal Mockup Visual -->
-    <div class="mt-16 max-w-5xl mx-auto relative rounded-2xl overflow-hidden border border-surface-border bg-surface-card shadow-2xl shadow-black/80">
+    <!-- ══════════════════════════════════════════════════════════════════
+         INTERACTIVE LIVE SIMULATOR PLAYGROUND
+         ══════════════════════════════════════════════════════════════════ -->
+    <div id="playground" class="mt-8 max-w-5xl mx-auto spotlight-card border border-white/10 shadow-2xl shadow-black/90">
       
-      <!-- Terminal Header -->
-      <div class="bg-slate-900/90 px-4 py-3 border-b border-surface-border flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
-          <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
-          <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
-          <span class="ml-2 font-mono text-xs text-slate-400">herdr-orchestration-session (w1X:t1)</span>
+      <!-- Playground Header -->
+      <div class="bg-dark-900/90 px-6 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="flex gap-1.5">
+            <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+            <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+            <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+          </div>
+          <span class="font-mono text-xs font-semibold text-white tracking-wide flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-accent-cyan"></i> LIVE DISPATCH SIMULATOR
+          </span>
         </div>
-        <div class="flex items-center gap-2 text-xs font-mono text-slate-500">
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>HERDR_ENV=1</span>
+
+        <!-- Controls / Selectors -->
+        <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+          
+          <!-- Worker Kind Selector -->
+          <div class="flex items-center gap-1.5 bg-dark-800 px-2.5 py-1 rounded-lg border border-white/5">
+            <span class="text-slate-400">Worker:</span>
+            <select id="sim-worker" class="bg-transparent text-accent-cyan font-bold outline-none cursor-pointer">
+              <option value="agy">agy (Google Antigravity CLI)</option>
+              <option value="codex">codex (OpenAI CLI)</option>
+              <option value="gemini">gemini (Custom CLI)</option>
+            </select>
+          </div>
+
+          <!-- Isolation Switch -->
+          <label class="flex items-center gap-1.5 bg-dark-800 px-2.5 py-1 rounded-lg border border-white/5 cursor-pointer select-none">
+            <input type="checkbox" id="sim-isolation" checked class="accent-brand-500 cursor-pointer">
+            <span class="text-slate-300">Git Worktree Isolation 🔒</span>
+          </label>
+
+          <!-- Run Button -->
+          <button id="sim-run-btn" onclick="runSimulation()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-accent-cyan text-white font-bold hover:brightness-110 transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20">
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>DISPATCH</span>
+          </button>
         </div>
       </div>
 
-      <!-- Terminal Body Grid -->
+      <!-- Simulator Body (Split View) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 font-mono text-xs">
         
-        <!-- Left: Claude Orchestrator Log (7 cols) -->
-        <div class="lg:col-span-7 p-5 bg-slate-950/90 border-b lg:border-b-0 lg:border-r border-surface-border space-y-3 leading-relaxed overflow-x-auto">
-          <div class="text-slate-500">// 1. Claude receives human request</div>
-          <div class="text-slate-200"><span class="text-brand-400 font-bold">orchestrator</span> <span class="text-emerald-400">❯</span> /herdr-dispatch "Tạo module auth_jwt.py kèm test unit test..."</div>
-          
-          <div class="text-slate-500 pt-2">// 2. Worktree isolation & Herdr Pane launch</div>
-          <div class="text-cyan-300">⚡ [Worktree] Created isolated branch: <span class="text-white">task/TASK-042</span></div>
-          <div class="text-cyan-300">⚡ [Herdr] Split pane right: <span class="text-white">w1X:p3</span> (cwd: .worktrees/TASK-042)</div>
-          <div class="text-cyan-300">⚡ [Herdr] Start agent <span class="text-amber-300">worker_agy_1</span> (--dangerously-skip-permissions)</div>
+        <!-- Left: Orchestrator Console (7 cols) -->
+        <div class="lg:col-span-7 p-6 bg-dark-950/95 border-b lg:border-b-0 lg:border-r border-white/10 space-y-3 terminal-scroll max-h-[380px] overflow-y-auto leading-relaxed">
+          <div class="text-slate-500 text-[11px] flex items-center justify-between pb-2 border-b border-white/5">
+            <span>[ORCHESTRATOR LOG: Claude Code]</span>
+            <span id="sim-timer" class="text-slate-400">Ready</span>
+          </div>
 
-          <div class="text-slate-500 pt-2">// 3. Task state tracking & Settled check</div>
-          <div class="text-slate-300">📋 Task state updated: <span class="text-emerald-400">TASK-042.json → status: working</span></div>
-          <div class="text-emerald-400">✔ Worker settled: idle (delivery confirmed via transcript)</div>
-
-          <div class="text-slate-500 pt-2">// 4. Enforced Diff-Based Review</div>
-          <div class="text-purple-300">🔍 [Reviewer] Inspecting git diff HEAD in .worktrees/TASK-042...</div>
-          <div class="text-emerald-300 font-semibold">✔ VERDICT: PASS (Tests passed: 5/5, JWT expiration check verified)</div>
+          <div id="sim-log-output" class="space-y-2 text-slate-300">
+            <div class="text-slate-400">// Select worker parameters above and click [DISPATCH] to simulate live execution.</div>
+            <div class="text-brand-300">&gt; Claude ready in Herdr session (HERDR_ENV=1).</div>
+          </div>
         </div>
 
-        <!-- Right: Real-time Pane Simulator (5 cols) -->
-        <div class="lg:col-span-5 p-5 bg-slate-900/60 flex flex-col justify-between space-y-4">
+        <!-- Right: Pane & State Machine Visualizer (5 cols) -->
+        <div class="lg:col-span-5 p-6 bg-dark-900/70 flex flex-col justify-between space-y-4">
+          
+          <!-- State Machine Progress Box -->
           <div>
             <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-              <span>Pane Preview: w1X:p3</span>
-              <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">agy (Claude Opus)</span>
+              <span>Task State Machine</span>
+              <span id="sim-state-badge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5 text-[10px] font-bold uppercase">IDLE</span>
             </div>
-            <div class="bg-black/60 p-3 rounded-lg border border-white/5 space-y-2 text-slate-300 text-[11px]">
-              <div class="text-slate-400">&gt; Creating auth_jwt.py...</div>
-              <div class="text-emerald-400 font-mono">● Edit(.worktrees/TASK-042/auth_jwt.py)</div>
-              <div class="text-emerald-400 font-mono">● Bash(pytest test_auth.py) [5 passed]</div>
-              <div class="text-slate-500 text-[10px] mt-2">No approval prompt blocked execution. Settled clean.</div>
+
+            <!-- Lifecycle Steps -->
+            <div class="space-y-2 text-[11px]">
+              <div id="step-pending" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 1. pending &amp; briefing
+              </div>
+              <div id="step-working" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 2. pane split &amp; working
+              </div>
+              <div id="step-verifying" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 3. diff-based review
+              </div>
+              <div id="step-passed" class="flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span> 4. passed &amp; merged
+              </div>
             </div>
           </div>
 
-          <div class="pt-3 border-t border-white/5">
-            <div class="text-[11px] text-slate-400 mb-2 flex justify-between">
-              <span>Task Ledger Status</span>
-              <span class="text-emerald-400 font-bold font-mono">STATE: PASSED</span>
+          <!-- Quick Code Diff Preview -->
+          <div id="sim-diff-box" class="bg-black/80 p-3 rounded-lg border border-white/5 space-y-1 text-[11px] hidden">
+            <div class="text-slate-400 text-[10px] uppercase font-bold border-b border-white/10 pb-1 flex justify-between">
+              <span>Reviewer git diff HEAD</span>
+              <span class="text-emerald-400 font-bold">VERIFIED</span>
             </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-gradient-to-r from-brand-500 to-accent-cyan h-1.5 rounded-full w-full"></div>
-            </div>
+            <div class="text-emerald-400">+ def create_access_token(data: dict):</div>
+            <div class="text-emerald-400">+     to_encode = data.copy()</div>
+            <div class="text-emerald-400">+     return jwt.encode(to_encode, SECRET_KEY)</div>
           </div>
+
         </div>
 
       </div>
     </div>
   </section>
 
-  <!-- Architecture Section -->
-  <section id="architecture" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-surface-border/60 relative z-10">
+  <!-- ══════════════════════════════════════════════════════════════════
+       ARCHITECTURE & 3-TIER DECOUPLING
+       ══════════════════════════════════════════════════════════════════ -->
+  <section id="architecture" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
     <div class="text-center max-w-3xl mx-auto mb-20">
-      <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Modular Architecture</h2>
+      <h2 class="text-xs font-mono font-bold text-accent-cyan uppercase tracking-widest mb-3">Enterprise Decoupled Runtime</h2>
       <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
-        How the 3-Layer Orchestration Works
+        Why 3-Layer Orchestration Wins
       </h3>
-      <p class="text-slate-400 text-base sm:text-lg">
-        Decouple cognitive orchestration from heavy execution. Every agent has a clear, non-overlapping responsibility.
+      <p class="text-slate-400 text-base sm:text-lg leading-relaxed">
+        Single-agent harnesses fail when context expands or executions crash. Our 3-layer architecture separates planning, process supervision, and code generation into distinct execution zones.
       </p>
     </div>
 
-    <!-- 3-Layer Diagram Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+    <!-- 3 Layers Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       
-      <!-- Layer 1: Orchestrator -->
-      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group">
-        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-brand-600 text-white font-mono text-[11px] font-bold tracking-wider uppercase">
-          Layer 1 • Brain
-        </div>
+      <!-- Card 1 -->
+      <div class="spotlight-card p-8 flex flex-col justify-between">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+          <div class="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/30 text-brand-400 flex items-center justify-center mb-6">
             <i data-lucide="brain-circuit" class="w-6 h-6"></i>
           </div>
-          <h4 class="text-xl font-bold text-white mb-2">Claude Code (Orchestrator)</h4>
+          <div class="text-xs font-mono font-bold uppercase tracking-wider text-brand-400 mb-1">Layer 1 • Cognitive Core</div>
+          <h4 class="text-2xl font-bold text-white mb-3">Claude Code</h4>
           <p class="text-slate-400 text-sm leading-relaxed mb-6">
-            Reads the user goal, decomposes complex tasks into discrete jobs, prepares briefings, coordinates workers, and makes high-level decisions.
+            Acts as the supreme architect. Understands user goals, plans multi-step milestones, decomposes tasks, and never writes unverified code directly.
           </p>
         </div>
-        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Writes .agents/BRIEFING.md</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Manages Task State Machine</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Resumes work after restart</li>
-        </ul>
+        <div class="space-y-2 border-t border-white/5 pt-4 text-xs font-mono text-slate-300">
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Writes .agents/BRIEFING.md</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Manages Task State Machine</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Automatic crash resume</div>
+        </div>
       </div>
 
-      <!-- Layer 2: Herdr -->
-      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group border-accent-cyan/20">
-        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-accent-cyan text-slate-950 font-mono text-[11px] font-bold tracking-wider uppercase">
-          Layer 2 • Runtime
-        </div>
+      <!-- Card 2 -->
+      <div class="spotlight-card p-8 flex flex-col justify-between border-accent-cyan/30">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+          <div class="w-12 h-12 rounded-2xl bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan flex items-center justify-center mb-6">
             <i data-lucide="layout-grid" class="w-6 h-6"></i>
           </div>
-          <h4 class="text-xl font-bold text-white mb-2">Herdr Terminal Multiplexer</h4>
+          <div class="text-xs font-mono font-bold uppercase tracking-wider text-accent-cyan mb-1">Layer 2 • Process Layer</div>
+          <h4 class="text-2xl font-bold text-white mb-3">Herdr Multiplexer</h4>
           <p class="text-slate-400 text-sm leading-relaxed mb-6">
-            Maintains persistent terminal panes, process lifecycle tracking (idle / working / blocked / done), and exposes CLI/Socket automation.
+            Controls real terminal panes, handles sub-second lifecycle polling (idle/working/blocked/done), and injects seamless automation APIs.
           </p>
         </div>
-        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Live Pane Split &amp; Attachment</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Non-blocking status polling</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Native Plugin Actions &amp; Events</li>
-        </ul>
+        <div class="space-y-2 border-t border-white/5 pt-4 text-xs font-mono text-slate-300">
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-cyan"></i> Live Pane Split &amp; Supervision</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-cyan"></i> Native Plugin Actions &amp; Hooks</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-cyan"></i> Real TTY terminal interaction</div>
+        </div>
       </div>
 
-      <!-- Layer 3: Workers & Reviewers -->
-      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group">
-        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-accent-purple text-white font-mono text-[11px] font-bold tracking-wider uppercase">
-          Layer 3 • Workers
-        </div>
+      <!-- Card 3 -->
+      <div class="spotlight-card p-8 flex flex-col justify-between border-accent-purple/30">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+          <div class="w-12 h-12 rounded-2xl bg-accent-purple/10 border border-accent-purple/30 text-accent-purple flex items-center justify-center mb-6">
             <i data-lucide="bot" class="w-6 h-6"></i>
           </div>
-          <h4 class="text-xl font-bold text-white mb-2">Isolated Workers &amp; Reviewer</h4>
+          <div class="text-xs font-mono font-bold uppercase tracking-wider text-accent-purple mb-1">Layer 3 • Workers &amp; Review</div>
+          <h4 class="text-2xl font-bold text-white mb-3">Isolated CLI Workers</h4>
           <p class="text-slate-400 text-sm leading-relaxed mb-6">
-            <strong>agy, codex</strong>, or any CLI agent runs in isolated git worktrees. A dedicated <strong>reviewer</strong> evaluates actual git diffs, not self-reports.
+            Executes tasks with <strong>agy</strong>, <strong>codex</strong>, or any CLI. Worktrees isolate files, while a dedicated Reviewer inspects diffs.
           </p>
         </div>
-        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> Git Worktree Isolated</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> 100% Skip Permissions Mode</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> Diff-based verification gate</li>
-        </ul>
+        <div class="space-y-2 border-t border-white/5 pt-4 text-xs font-mono text-slate-300">
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-purple"></i> Git Worktree Isolated (.worktrees/)</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-purple"></i> 100% Skip Permissions Mode</div>
+          <div class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-accent-purple"></i> Strict Diff-based Verification</div>
+        </div>
       </div>
 
-    </div>
-
-    <!-- Workflow Diagram Animation / Image -->
-    <div class="mt-16 glass-card p-4 sm:p-8 rounded-2xl max-w-4xl mx-auto border border-surface-border text-center">
-      <div class="text-xs font-mono text-slate-400 mb-4 flex items-center justify-center gap-2">
-        <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i>
-        <span>Workflow Diagram</span>
-      </div>
-      <img src="ai_coding_workflow_animated.gif" alt="AI Coding Workflow Animated" class="rounded-xl shadow-xl mx-auto w-full max-w-3xl border border-white/5">
     </div>
   </section>
 
-  <!-- Key Features Grid -->
-  <section id="features" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-surface-border/60 relative z-10">
+  <!-- ══════════════════════════════════════════════════════════════════
+       5 SUPERPOWERS SECTION (BENTO GRID 2.0)
+       ══════════════════════════════════════════════════════════════════ -->
+  <section id="superpowers" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
     <div class="text-center max-w-3xl mx-auto mb-16">
-      <h2 class="text-xs font-mono font-bold text-accent-cyan uppercase tracking-widest mb-3">Enterprise Grade</h2>
+      <h2 class="text-xs font-mono font-bold text-accent-purple uppercase tracking-widest mb-3">Battle-Tested Innovations</h2>
       <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
-        5 Pillars of Reliable Dispatch
+        5 Superpowers You Won't Find Elsewhere
       </h3>
       <p class="text-slate-400 text-base sm:text-lg">
-        Designed from empirical battle testing on real coding tasks. No blind trust, no race conditions, no unverified claims.
+        Engineered specifically to solve real failure modes discovered during deep empirical testing.
       </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       
-      <!-- Feature 1 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-4">
-          <i data-lucide="cpu" class="w-5 h-5"></i>
+      <!-- Bento Item 1 (Wide 2 cols) -->
+      <div class="md:col-span-2 spotlight-card p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-accent-cyan uppercase font-bold tracking-wider">Superpower #1</span>
+            <span class="px-2 py-0.5 rounded bg-accent-cyan/10 text-accent-cyan text-xs font-mono border border-accent-cyan/20">Zero Workspace Pollution</span>
+          </div>
+          <h4 class="text-2xl font-bold text-white mb-3">Git Worktree Isolation (`--isolation worktree`)</h4>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            Dispatching multiple workers into the same folder destroys codebases. Herdr Worker Orchestrator spins up isolated git worktrees on dedicated branches (`task/TASK-xxx`). Workers never overwrite Claude's active files, enabling true parallel multi-agent development.
+          </p>
         </div>
-        <h4 class="text-lg font-bold text-white mb-2">Universal Worker Engine</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Drive <code>agy</code>, <code>codex</code>, <code>gemini</code>, or any Herdr-supported kind through the exact same unified interface with per-kind native argument tuning.
-        </p>
+        <div class="bg-black/50 p-4 rounded-xl font-mono text-xs text-slate-300 border border-white/5 space-y-1">
+          <div class="text-slate-500">// Clean isolated tree architecture:</div>
+          <div>Project/</div>
+          <div class="text-brand-300">├── main worktree        ← Claude works here</div>
+          <div class="text-accent-cyan">├── .worktrees/TASK-001 ← Worker 1 (agy)</div>
+          <div class="text-accent-purple">└── .worktrees/TASK-002 ← Worker 2 (codex)</div>
+        </div>
       </div>
 
-      <!-- Feature 2 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan flex items-center justify-center mb-4">
-          <i data-lucide="database" class="w-5 h-5"></i>
+      <!-- Bento Item 2 -->
+      <div class="spotlight-card p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-accent-purple uppercase font-bold tracking-wider">Superpower #2</span>
+            <span class="px-2 py-0.5 rounded bg-accent-purple/10 text-accent-purple text-xs font-mono border border-accent-purple/20">State Machine</span>
+          </div>
+          <h4 class="text-xl font-bold text-white mb-3">Stateful Task Ledger &amp; Crash Recovery</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Every task lives in <code>.agents/tasks/TASK-xxx.json</code> with lifecycle state transitions. If Claude restarts or context compacts, <code>herdr plugin action invoke resume</code> queries live Herdr agents and resumes work with zero loss.
+          </p>
         </div>
-        <h4 class="text-lg font-bold text-white mb-2">Stateful Task State Machine</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Every task is saved in <code>.agents/tasks/TASK-xxx.json</code>. If Claude restarts or compacts context, <code>herdr-resume</code> recovers active tasks automatically.
-        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Survives session compactions
+        </div>
       </div>
 
-      <!-- Feature 3 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-accent-emerald/10 border border-accent-emerald/20 text-accent-emerald flex items-center justify-center mb-4">
-          <i data-lucide="git-fork" class="w-5 h-5"></i>
+      <!-- Bento Item 3 -->
+      <div class="spotlight-card p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-bold tracking-wider">Superpower #3</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono border border-emerald-500/20">Enforced Verification</span>
+          </div>
+          <h4 class="text-xl font-bold text-white mb-3">Diff-Enforced Review Policy</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            AI workers frequently hallucinate success. Our reviewer subagent is strictly forbidden from reading worker self-reports. Reviewers only inspect <code>git diff</code>, run build scripts, and verify test assertions before granting PASS status.
+          </p>
         </div>
-        <h4 class="text-lg font-bold text-white mb-2">Git Worktree Isolation</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Zero conflict during parallel execution. Workers modify isolated git worktrees on dedicated branches. Clean merge or cherry-pick upon verification.
-        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Evidence before assertions always
+        </div>
       </div>
 
-      <!-- Feature 4 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center mb-4">
-          <i data-lucide="file-diff" class="w-5 h-5"></i>
+      <!-- Bento Item 4 (Wide 2 cols) -->
+      <div class="md:col-span-2 spotlight-card p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-mono text-amber-400 uppercase font-bold tracking-wider">Superpower #4 &amp; #5</span>
+            <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-xs font-mono border border-amber-500/20">Smart Heuristics</span>
+          </div>
+          <h4 class="text-2xl font-bold text-white mb-3">`stalled = UNKNOWN` &amp; Zero Permission Blocks</h4>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            Herdr error <code>agent_prompt_stalled</code> does not mean fail. Our script inspects terminal transcripts for delivery markers before deciding to wait vs retry. Additionally, automatic injection of <code>--dangerously-skip-permissions</code> and <code>--add-dir</code> prevents agents from hanging on interactive prompts.
+          </p>
         </div>
-        <h4 class="text-lg font-bold text-white mb-2">Diff-Enforced Review Policy</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Reviewers NEVER read or trust self-reported worker progress. Verdicts require inspecting real <code>git diff</code>, running test suites, and build checks.
-        </p>
-      </div>
-
-      <!-- Feature 5 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-accent-amber/10 border border-accent-amber/20 text-accent-amber flex items-center justify-center mb-4">
-          <i data-lucide="shield-alert" class="w-5 h-5"></i>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+          <div class="p-3 bg-dark-900 rounded-xl border border-white/5">
+            <div class="text-amber-400 font-bold mb-1">Old Way (Blind Failure)</div>
+            <div class="text-slate-400">agent_prompt_stalled ➔ Abort task ➔ User frustrated</div>
+          </div>
+          <div class="p-3 bg-dark-900 rounded-xl border border-white/5">
+            <div class="text-emerald-400 font-bold mb-1">Our Way (Intelligent Inspection)</div>
+            <div class="text-slate-400">stalled ➔ Read transcript ➔ Found marker ➔ Wait &amp; Pass!</div>
+          </div>
         </div>
-        <h4 class="text-lg font-bold text-white mb-2">Stalled = UNKNOWN Protocol</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          <code>agent_prompt_stalled</code> is treated as UNKNOWN, not FAIL. Inspects pane transcripts for prompt delivery markers before attempting smart retries.
-        </p>
-      </div>
-
-      <!-- Feature 6 -->
-      <div class="glass-card p-6 rounded-2xl transition">
-        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-4">
-          <i data-lucide="zap" class="w-5 h-5"></i>
-        </div>
-        <h4 class="text-lg font-bold text-white mb-2">Zero-Friction Execution</h4>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Automatically injects <code>--dangerously-skip-permissions</code> and <code>--add-dir</code> so workers never halt on interactive approval dialogues.
-        </p>
       </div>
 
     </div>
   </section>
 
-  <!-- Interactive Installation Section -->
-  <section id="installation" class="py-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-surface-border/60 relative z-10">
+  <!-- ══════════════════════════════════════════════════════════════════
+       AUTHOR & INFINITY TECH SHOWCASE SECTION
+       ══════════════════════════════════════════════════════════════════ -->
+  <section id="author" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/5 relative z-10">
+    <div class="max-w-4xl mx-auto spotlight-card p-8 sm:p-12 relative overflow-hidden border border-brand-500/30">
+      
+      <!-- Background Graphic -->
+      <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-brand-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+      <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+        
+        <!-- Author Avatar with Glowing Ring -->
+        <div class="relative flex-shrink-0">
+          <div class="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl p-1 bg-gradient-to-tr from-brand-500 via-accent-cyan to-accent-purple shadow-2xl shadow-brand-500/30">
+            <div class="w-full h-full bg-dark-950 rounded-[22px] flex items-center justify-center overflow-hidden relative">
+              <div class="text-5xl sm:text-6xl font-black font-mono text-gradient-purple">ĐA</div>
+            </div>
+          </div>
+          <div class="absolute -bottom-2 -right-2 bg-dark-900 px-3 py-1 rounded-full border border-white/10 text-[10px] font-mono text-accent-cyan font-bold shadow-lg">
+            CREATOR
+          </div>
+        </div>
+
+        <!-- Author Bio & Vision -->
+        <div class="text-center md:text-left space-y-4">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-mono font-semibold mb-2">
+              <span>Infinity Tech Innovation</span>
+            </div>
+            <h3 class="text-3xl font-extrabold text-white tracking-tight">Đức Anh (anhnd3005)</h3>
+            <p class="text-accent-cyan font-mono text-sm">AI Architect &amp; Systems Engineer @ Infinity Tech</p>
+          </div>
+
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed italic">
+            "Don't just prompt AI. Build deterministic runtime harnesses around them. AI agents are as powerful as the operational discipline and runtime isolation you give them."
+          </p>
+
+          <!-- Socials & Links -->
+          <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
+            <a href="https://github.com/anhnd3005-infinity" target="_blank" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-dark-900 hover:bg-dark-800 border border-white/10 text-xs font-mono text-white transition">
+              <i data-lucide="github" class="w-4 h-4 text-brand-400"></i>
+              <span>GitHub @anhnd3005-infinity</span>
+            </a>
+            <a href="mailto:anhnd3005@infinitytech.global" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-dark-900 hover:bg-dark-800 border border-white/10 text-xs font-mono text-slate-300 hover:text-white transition">
+              <i data-lucide="mail" class="w-4 h-4 text-accent-cyan"></i>
+              <span>anhnd3005@infinitytech.global</span>
+            </a>
+            <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 border border-brand-500/30 text-xs font-mono text-brand-300 transition">
+              <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+              <span>Support on GitHub</span>
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       INSTALLATION & QUICK START SECTION
+       ══════════════════════════════════════════════════════════════════ -->
+  <section id="installation" class="py-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-white/5 relative z-10">
     <div class="text-center max-w-3xl mx-auto mb-16">
-      <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Quick Installation</h2>
+      <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Getting Started</h2>
       <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
-        Install in Seconds
+        Install in 1 Click
       </h3>
       <p class="text-slate-400 text-base">
-        Choose your environment: install as a Claude Code Plugin, natively in Herdr, or both.
+        Works seamlessly as a Claude Code Plugin, natively in Herdr, or both.
       </p>
     </div>
 
     <!-- Tabbed Code Box -->
-    <div class="glass-card rounded-2xl overflow-hidden border border-surface-border shadow-2xl">
+    <div class="spotlight-card rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
       
       <!-- Tab Header -->
-      <div class="flex items-center justify-between border-b border-surface-border bg-slate-900/80 px-4 pt-3">
+      <div class="flex items-center justify-between border-b border-white/10 bg-dark-900/90 px-6 pt-3">
         <div class="flex gap-2">
           <button id="tab-claude" onclick="switchTab('claude')" 
-                  class="px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-surface-card text-white">
-            <i data-lucide="bot" class="w-4 h-4 text-brand-400"></i> Claude Code
+                  class="px-5 py-3 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-dark-950 text-white shadow-inner">
+            <i data-lucide="bot" class="w-4 h-4 text-brand-400"></i> Claude Code Plugin
           </button>
           <button id="tab-herdr" onclick="switchTab('herdr')" 
-                  class="px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white">
-            <i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Herdr Native
+                  class="px-5 py-3 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white">
+            <i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Herdr Native Plugin
           </button>
         </div>
-        <button onclick="copyCurrentCode()" class="flex items-center gap-1.5 px-3 py-1 text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
+        <button onclick="copyCurrentCode()" class="flex items-center gap-1.5 px-3 py-1 text-xs font-mono bg-dark-800 hover:bg-dark-700 text-slate-300 rounded-lg border border-white/10 transition">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
           <span id="copy-btn-text">Copy</span>
         </button>
       </div>
 
       <!-- Tab Content: Claude Code -->
-      <div id="content-claude" class="p-6 font-mono text-sm space-y-4 bg-slate-950/80">
-        <div class="text-slate-400 text-xs">// Run inside your Claude Code interactive session:</div>
+      <div id="content-claude" class="p-6 font-mono text-sm space-y-4 bg-dark-950/95">
+        <div class="text-slate-400 text-xs">// Run inside your interactive Claude Code session:</div>
         <pre class="text-brand-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code id="code-claude">/plugin marketplace add https://github.com/anhnd3005-infinity/herdr-worker-orchestrator.git
 /plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace</code></pre>
-        <div class="text-slate-500 text-xs pt-2">Works from any workspace on your machine. Public repo, no SSH keys needed.</div>
+        <div class="text-slate-500 text-xs pt-2">Public repository — works globally across all workspaces on your machine.</div>
       </div>
 
       <!-- Tab Content: Herdr Native -->
-      <div id="content-herdr" class="p-6 font-mono text-sm space-y-4 bg-slate-950/80 hidden">
+      <div id="content-herdr" class="p-6 font-mono text-sm space-y-4 bg-dark-950/95 hidden">
         <div class="text-slate-400 text-xs">// Install directly using Herdr CLI:</div>
         <pre class="text-cyan-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code id="code-herdr">herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator</code></pre>
-        <div class="text-slate-400 text-xs pt-2">// Or link locally during development:</div>
+        <div class="text-slate-400 text-xs pt-2">// Or link locally for active development:</div>
         <pre class="text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code>herdr plugin link /path/to/herdr-worker-orchestrator</code></pre>
       </div>
 
     </div>
 
     <!-- Usage Prompt Showcase -->
-    <div class="mt-8 p-6 rounded-2xl glass-card border border-brand-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="mt-8 p-6 rounded-2xl spotlight-card border border-brand-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
-        <div class="text-xs font-mono font-bold text-brand-400 uppercase tracking-wider mb-1">How to Trigger in Chat</div>
-        <div class="text-slate-200 text-sm font-mono">&gt; "Dùng agy làm worker tạo API RESTful bằng FastAPI trong workspace, test kỹ và báo cáo kết quả."</div>
+        <div class="text-xs font-mono font-bold text-brand-400 uppercase tracking-wider mb-1">Natural Prompt Activation</div>
+        <div class="text-slate-200 text-sm font-mono">&gt; "Dùng agy làm worker để tạo module auth_jwt.py, test kỹ rồi báo kết quả cho tôi."</div>
       </div>
       <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator#how-to-use-it" target="_blank" class="text-xs font-mono text-accent-cyan hover:underline flex items-center gap-1 whitespace-nowrap">
         View command docs <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
@@ -524,12 +644,14 @@
   </section>
 
   <!-- Footer -->
-  <footer class="border-t border-surface-border/60 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-sm text-slate-500 relative z-10">
+  <footer class="border-t border-white/5 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-sm text-slate-500 relative z-10">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
       <div class="flex items-center gap-3">
-        <div class="w-7 h-7 rounded-lg bg-brand-600/20 text-brand-400 flex items-center justify-center font-mono font-bold text-sm">⚡</div>
-        <span class="font-bold text-slate-300">herdr-worker-orchestrator</span>
-        <span class="text-xs font-mono text-slate-600">v0.5.0</span>
+        <div class="w-8 h-8 rounded-xl bg-brand-600/20 text-brand-400 flex items-center justify-center font-mono font-bold text-sm">⚡</div>
+        <div>
+          <span class="font-bold text-slate-200">herdr-worker-orchestrator</span>
+          <span class="ml-2 text-xs font-mono text-slate-500">v0.5.0</span>
+        </div>
       </div>
       <div class="flex items-center gap-6 text-xs font-mono">
         <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" class="hover:text-slate-300 transition">GitHub</a>
@@ -537,17 +659,77 @@
         <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/blob/main/LICENSE" target="_blank" class="hover:text-slate-300 transition">MIT License</a>
       </div>
     </div>
-    <div class="mt-8 text-center text-xs text-slate-600">
-      Built with precision for autonomous multi-agent development.
+    <div class="mt-8 text-center text-xs text-slate-600 font-mono">
+      Crafted with precision by Duc Anh @ Infinity Tech. Open-source under MIT License.
     </div>
   </footer>
 
-  <!-- Script for Tabs & Copy -->
+  <!-- ══════════════════════════════════════════════════════════════════
+       SCRIPTS: SIMULATOR & INTERACTIVE EFFECTS
+       ══════════════════════════════════════════════════════════════════ -->
   <script>
     lucide.createIcons();
 
-    let currentTab = 'claude';
+    // Spotlight cursor effect
+    document.querySelectorAll('.spotlight-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+        card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+      });
+    });
 
+    // Ambient Canvas Particle Simulation
+    const canvas = document.getElementById('ambient-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = Array.from({ length: 35 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      radius: Math.random() * 2 + 1,
+    }));
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.4)';
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.08)';
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 130) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // Tab Switcher
+    let currentTab = 'claude';
     function switchTab(tab) {
       currentTab = tab;
       const btnClaude = document.getElementById('tab-claude');
@@ -556,13 +738,13 @@
       const contentHerdr = document.getElementById('content-herdr');
 
       if (tab === 'claude') {
-        btnClaude.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-surface-card text-white';
-        btnHerdr.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
+        btnClaude.className = 'px-5 py-3 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-dark-950 text-white shadow-inner';
+        btnHerdr.className = 'px-5 py-3 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
         contentClaude.classList.remove('hidden');
         contentHerdr.classList.add('hidden');
       } else {
-        btnHerdr.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-accent-cyan bg-surface-card text-white';
-        btnClaude.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
+        btnHerdr.className = 'px-5 py-3 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-accent-cyan bg-dark-950 text-white shadow-inner';
+        btnClaude.className = 'px-5 py-3 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
         contentHerdr.classList.remove('hidden');
         contentClaude.classList.add('hidden');
       }
@@ -578,6 +760,101 @@
           btnText.innerText = 'Copy';
         }, 2000);
       });
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // LIVE SIMULATOR ENGINE
+    // ══════════════════════════════════════════════════════════════════
+    let isRunning = false;
+    async function runSimulation() {
+      if (isRunning) return;
+      isRunning = true;
+      const workerKind = document.getElementById('sim-worker').value;
+      const isIsolation = document.getElementById('sim-isolation').checked;
+      const logBox = document.getElementById('sim-log-output');
+      const stateBadge = document.getElementById('sim-state-badge');
+      const diffBox = document.getElementById('sim-diff-box');
+      const runBtn = document.getElementById('sim-run-btn');
+
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      diffBox.classList.add('hidden');
+      logBox.innerHTML = '';
+
+      const appendLog = (html, delay = 600) => {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            logBox.innerHTML += `<div>${html}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+            resolve();
+          }, delay);
+        });
+      };
+
+      const setStep = (stepId, active = true, passed = false) => {
+        const el = document.getElementById(stepId);
+        if (passed) {
+          el.className = 'flex items-center gap-2 p-2 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold';
+          el.querySelector('span').className = 'w-2 h-2 rounded-full bg-emerald-400';
+        } else if (active) {
+          el.className = 'flex items-center gap-2 p-2 rounded bg-brand-500/15 border border-brand-500/30 text-brand-200 font-bold animate-pulse';
+          el.querySelector('span').className = 'w-2 h-2 rounded-full bg-accent-cyan animate-ping';
+        } else {
+          el.className = 'flex items-center gap-2 p-2 rounded bg-dark-800/80 border border-white/5 text-slate-400';
+          el.querySelector('span').className = 'w-2 h-2 rounded-full bg-slate-500';
+        }
+      };
+
+      // Step 1: Pending & Briefing
+      stateBadge.innerText = 'DISPATCHING';
+      stateBadge.className = 'px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] font-bold uppercase';
+      setStep('step-pending', true);
+      setStep('step-working', false);
+      setStep('step-verifying', false);
+      setStep('step-passed', false);
+
+      await appendLog(`<span class="text-brand-400 font-bold">orchestrator</span> <span class="text-emerald-400">❯</span> Initializing task <span class="text-white">TASK-108</span>...`, 200);
+      await appendLog(`<span class="text-slate-400">Writing .agents/tasks/TASK-108.json (state: pending)</span>`, 400);
+
+      if (isIsolation) {
+        await appendLog(`<span class="text-cyan-300">🔒 [Isolation] Creating git worktree at .worktrees/TASK-108 (branch task/TASK-108)...</span>`, 500);
+      }
+
+      setStep('step-pending', false, true);
+      setStep('step-working', true);
+      stateBadge.innerText = 'WORKING';
+      stateBadge.className = 'px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30 text-[10px] font-bold uppercase';
+
+      // Step 2: Pane split & agent launch
+      await appendLog(`<span class="text-cyan-300">⚡ [Herdr] herdr pane split --current --cwd "${isIsolation ? '.worktrees/TASK-108' : 'workspace'}" ➔ w1X:p2</span>`, 600);
+      await appendLog(`<span class="text-amber-300">⚡ [Herdr] herdr agent start worker_${workerKind}_1 --kind ${workerKind} -- --dangerously-skip-permissions</span>`, 600);
+      await appendLog(`<span class="text-slate-300">⚡ [Herdr] Sending prompt with delivery marker confirmation...</span>`, 700);
+
+      // Simulation of working
+      await appendLog(`<span class="text-emerald-400 font-mono">● ${workerKind}: Writing module files &amp; executing test suite...</span>`, 900);
+      await appendLog(`<span class="text-slate-400">Worker settled clean (status: idle / done, delivery confirmed).</span>`, 800);
+
+      setStep('step-working', false, true);
+      setStep('step-verifying', true);
+      stateBadge.innerText = 'VERIFYING';
+      stateBadge.className = 'px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple border border-accent-purple/30 text-[10px] font-bold uppercase';
+
+      // Step 3: Diff-based Review
+      await appendLog(`<span class="text-purple-300">🔍 [Reviewer Subagent] Inspecting actual git diff (ignoring worker self-reports)...</span>`, 700);
+      diffBox.classList.remove('hidden');
+      await appendLog(`<span class="text-emerald-300 font-semibold">✔ [Reviewer] Tests passed 6/6. No syntax regressions.</span>`, 700);
+
+      // Step 4: Passed
+      setStep('step-verifying', false, true);
+      setStep('step-passed', false, true);
+      stateBadge.innerText = 'PASSED';
+      stateBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase';
+
+      await appendLog(`<span class="text-emerald-400 font-bold">🎉 TASK-108 VERDICT: PASSED. Updated .agents/state.json.</span>`, 500);
+
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      isRunning = false;
     }
   </script>
 </body>
