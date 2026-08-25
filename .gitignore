@@ -1,3 +1,20 @@
+# OS & IDE
 .DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+
+# Git worktrees (isolated worker workspaces)
+.worktrees/
+
+# Local logs
+*.log
