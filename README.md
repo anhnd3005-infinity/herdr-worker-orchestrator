@@ -1,5 +1,12 @@
 # herdr-worker-orchestrator
 
+[![Website](https://img.shields.io/badge/Website-Live%20Showcase-6366f1?style=for-the-badge&logo=google-chrome&logoColor=white)](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)
+[![Version](https://img.shields.io/badge/version-0.5.0-06b6d4?style=for-the-badge)](https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/releases)
+[![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)](LICENSE)
+
+> 🌐 **Live Showcase & Interactive Simulator:** [anhnd3005-infinity.github.io/herdr-worker-orchestrator](https://anhnd3005-infinity.github.io/herdr-worker-orchestrator/)  
+> 🎬 **30s Remotion Video Walkthrough:** [`remotion/`](remotion/) or watch directly on the showcase website!
+
 Claude Code as orchestrator, CLI agent workers of any
 [Herdr](https://herdr.dev)-supported kind (`agy`, `codex`, and in principle
 any other kind Herdr recognizes) running interactively inside
