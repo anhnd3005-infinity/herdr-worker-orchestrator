@@ -186,7 +186,6 @@
       <!-- Navigation Links -->
       <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-400">
         <a href="#playground" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Live Simulator</a>
-        <a href="#audio-walkthrough" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="volume-2" class="w-4 h-4 text-emerald-400"></i> Audio Overview</a>
         <a href="#video-demo" class="hover:text-white transition flex items-center gap-1.5"><i data-lucide="play-circle" class="w-4 h-4 text-accent-purple"></i> Video Demo</a>
         <a href="#architecture" class="hover:text-white transition">Architecture</a>
         <a href="#superpowers" class="hover:text-white transition">5 Superpowers</a>
@@ -229,54 +228,9 @@
       </h1>
 
       <!-- Subtitle -->
-      <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed mb-8 max-w-3xl mx-auto">
+      <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed mb-10 max-w-3xl mx-auto">
         Stop letting coding agents hallucinate completion. <strong>Claude Code</strong> coordinates as the high-level brain, <strong>Herdr</strong> manages persistent terminal panes, and isolated workers (<strong>agy, codex</strong>) write code safely in Git worktrees with automated diff reviews.
       </p>
-
-      <!-- ══════════════════════════════════════════════════════════════════
-           AUDIO OVERVIEW / PODCAST BAR (PROMINENT AUDIO WALKTHROUGH)
-           ══════════════════════════════════════════════════════════════════ -->
-      <div id="audio-walkthrough" class="mb-10 max-w-3xl mx-auto p-4 sm:p-5 rounded-2xl spotlight-card border border-emerald-500/30 bg-dark-900/90 shadow-xl shadow-emerald-500/5 text-left scroll-mt-24">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          <!-- Play / Pause Button & Audio Label -->
-          <div class="flex items-center gap-3.5 w-full sm:w-auto">
-            <button id="audio-play-btn" onclick="toggleAudio()" class="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-accent-cyan text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 hover:scale-105 active:scale-95 transition flex-shrink-0">
-              <i id="audio-icon" data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
-            </button>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-white tracking-wide">30-Second Audio Walkthrough</span>
-                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> 🔊 Narration + Synth
-                </span>
-              </div>
-              <div class="text-slate-400 text-xs font-mono flex items-center gap-2 mt-1">
-                <span id="audio-time" class="text-emerald-400 font-bold">0:00 / 0:30</span>
-                <span>•</span>
-                <span class="text-slate-300">English Voiceover by Daniel</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Progress Bar & Equalizer -->
-          <div class="flex items-center gap-3 w-full sm:w-64">
-            <div class="flex-1 bg-dark-800 rounded-full h-2.5 overflow-hidden cursor-pointer relative border border-white/5" onclick="seekAudioProgress(event)">
-              <div id="audio-progress-bar" class="bg-gradient-to-r from-emerald-400 to-accent-cyan h-full w-0 transition-all"></div>
-            </div>
-            
-            <!-- Animated Equalizer Bars -->
-            <div id="audio-eq" class="flex items-end gap-0.5 h-5 opacity-40">
-              <span class="w-1 bg-emerald-400 rounded-full h-2"></span>
-              <span class="w-1 bg-accent-cyan rounded-full h-4"></span>
-              <span class="w-1 bg-brand-400 rounded-full h-3"></span>
-              <span class="w-1 bg-emerald-400 rounded-full h-5"></span>
-            </div>
-          </div>
-
-        </div>
-        <audio id="global-narration-audio" src="narration.mp3" preload="metadata"></audio>
-      </div>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -916,70 +870,6 @@
       } else {
         statusText.innerText = 'Sound OFF';
         icon.className = 'w-3.5 h-3.5 text-slate-500';
-      }
-    }
-
-    // ══════════════════════════════════════════════════════════════════
-    // DEDICATED NARRATION AUDIO PLAYER
-    // ══════════════════════════════════════════════════════════════════
-    const narrationAudio = document.getElementById('global-narration-audio');
-    const audioPlayBtn = document.getElementById('audio-play-btn');
-    const audioIcon = document.getElementById('audio-icon');
-    const audioTime = document.getElementById('audio-time');
-    const audioProgressBar = document.getElementById('audio-progress-bar');
-    const audioEq = document.getElementById('audio-eq');
-
-    function toggleAudio() {
-      if (!narrationAudio) return;
-      if (narrationAudio.paused) {
-        narrationAudio.play();
-        audioIcon.setAttribute('data-lucide', 'pause');
-        audioPlayBtn.classList.add('ring-4', 'ring-emerald-500/30');
-        audioEq.classList.remove('opacity-40');
-        audioEq.classList.add('opacity-100');
-        Array.from(audioEq.children).forEach(bar => bar.classList.add('animate-equalizer'));
-      } else {
-        narrationAudio.pause();
-        audioIcon.setAttribute('data-lucide', 'play');
-        audioPlayBtn.classList.remove('ring-4', 'ring-emerald-500/30');
-        audioEq.classList.add('opacity-40');
-        audioEq.classList.remove('opacity-100');
-        Array.from(audioEq.children).forEach(bar => bar.classList.remove('animate-equalizer'));
-      }
-      lucide.createIcons();
-    }
-
-    if (narrationAudio) {
-      narrationAudio.addEventListener('timeupdate', () => {
-        const cur = narrationAudio.currentTime;
-        const dur = narrationAudio.duration || 30;
-        const pct = (cur / dur) * 100;
-        audioProgressBar.style.width = `${pct}%`;
-        const curMin = Math.floor(cur / 60);
-        const curSec = Math.floor(cur % 60).toString().padStart(2, '0');
-        const durMin = Math.floor(dur / 60);
-        const durSec = Math.floor(dur % 60).toString().padStart(2, '0');
-        audioTime.innerText = `${curMin}:${curSec} / ${durMin}:${durSec}`;
-      });
-
-      narrationAudio.addEventListener('ended', () => {
-        audioIcon.setAttribute('data-lucide', 'play');
-        audioPlayBtn.classList.remove('ring-4', 'ring-emerald-500/30');
-        audioEq.classList.add('opacity-40');
-        audioProgressBar.style.width = '0%';
-        lucide.createIcons();
-      });
-    }
-
-    function seekAudioProgress(e) {
-      if (!narrationAudio) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;
-      const pct = clickX / width;
-      narrationAudio.currentTime = pct * (narrationAudio.duration || 30);
-      if (narrationAudio.paused) {
-        toggleAudio();
       }
     }
 
