@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herdr Worker Orchestrator — Orchestrate AI CLI Agents with Precision</title>
+  <meta name="description" content="Claude Code as the orchestrator. Herdr as the terminal layer. Multi-agent CLI execution (agy, codex) with stateful ledger, git worktree isolation, and diff-based review.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            accent: {
+              cyan: '#06b6d4',
+              purple: '#a855f7',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            },
+            surface: {
+              bg: '#07090e',
+              card: '#0e131f',
+              border: '#1e293b',
+              hover: '#182234',
+            }
+          },
+          animation: {
+            'glow-pulse': 'glowPulse 6s ease-in-out infinite alternate',
+            'float': 'float 4s ease-in-out infinite',
+            'scanline': 'scanline 8s linear infinite',
+          },
+          keyframes: {
+            glowPulse: {
+              '0%': { opacity: '0.3', transform: 'scale(0.95)' },
+              '100%': { opacity: '0.6', transform: 'scale(1.05)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-8px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom Glow & Glass */
+    .glass-card {
+      background: rgba(14, 19, 31, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15);
+    }
+    .code-gradient {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(6,182,212,0.05) 100%);
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .text-gradient-purple {
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .bg-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #07090e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+
+<body class="bg-surface-bg text-slate-300 font-sans antialiased selection:bg-brand-500 selection:text-white relative overflow-x-hidden min-h-screen">
+
+  <!-- Background Ambient Glow -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-brand-600/15 rounded-full blur-[140px] animate-glow-pulse"></div>
+    <div class="absolute top-[30%] right-[-5%] w-[500px] h-[500px] bg-accent-cyan/10 rounded-full blur-[140px] animate-glow-pulse" style="animation-delay: -3s;"></div>
+    <div class="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] bg-accent-purple/10 rounded-full blur-[140px]"></div>
+    <div class="absolute inset-0 bg-grid"></div>
+  </div>
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-surface-bg/80 border-b border-surface-border/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan flex items-center justify-center shadow-lg shadow-brand-500/20 font-mono font-bold text-white text-lg">
+          ⚡
+        </div>
+        <div>
+          <span class="font-bold text-white text-base tracking-tight">herdr-worker-orchestrator</span>
+          <span class="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-semibold">v0.5.0</span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+        <a href="#architecture" class="hover:text-white transition">Architecture</a>
+        <a href="#features" class="hover:text-white transition">Features</a>
+        <a href="#workflow" class="hover:text-white transition">Workflow</a>
+        <a href="#installation" class="hover:text-white transition">Installation</a>
+        <a href="https://herdr.dev/plugins/" target="_blank" class="hover:text-accent-cyan transition flex items-center gap-1">
+          Herdr Plugin <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+        </a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" 
+           class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl transition shadow-sm hover:border-slate-600">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>GitHub</span>
+          <span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300 font-mono">⭐ Star</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-20 pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10">
+    <div class="text-center max-w-3xl mx-auto">
+      
+      <!-- Eyebrow Badge -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-8 shadow-inner shadow-brand-500/10">
+        <span class="w-2 h-2 rounded-full bg-accent-cyan animate-ping"></span>
+        <span>Dual Compatibility • Claude Code & Herdr Plugin</span>
+      </div>
+
+      <!-- Main Headline -->
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-gradient leading-[1.15] mb-6">
+        Orchestrate AI CLI Agents with <span class="text-gradient-purple">Surgical Precision</span>
+      </h1>
+
+      <!-- Subtitle -->
+      <p class="text-lg sm:text-xl text-slate-400 font-normal leading-relaxed mb-10">
+        Use <strong>Claude Code</strong> as the high-level brain. Let <strong>Herdr</strong> manage persistent terminal panes. Dispatch heavy coding to <strong>agy</strong>, <strong>codex</strong>, or any CLI agent — with stateful task tracking, git worktree isolation, and diff-based review.
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="#installation" 
+           class="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 shadow-xl shadow-brand-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-base">
+          <i data-lucide="terminal" class="w-5 h-5"></i>
+          <span>Get Started in 1-Click</span>
+        </a>
+        <a href="#architecture" 
+           class="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-slate-300 bg-surface-card hover:bg-surface-hover border border-surface-border transition flex items-center justify-center gap-2 text-base">
+          <i data-lucide="network" class="w-5 h-5"></i>
+          <span>Explore Architecture</span>
+        </a>
+      </div>
+
+      <!-- Live Quick Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto pt-4 border-t border-surface-border/50 text-left">
+        <div class="p-3">
+          <div class="text-2xl font-bold font-mono text-white">0%</div>
+          <div class="text-xs text-slate-400 font-medium">State Loss on Restart</div>
+        </div>
+        <div class="p-3">
+          <div class="text-2xl font-bold font-mono text-accent-cyan">100%</div>
+          <div class="text-xs text-slate-400 font-medium">Automated (No Prompts)</div>
+        </div>
+        <div class="p-3">
+          <div class="text-2xl font-bold font-mono text-accent-emerald">Isolated</div>
+          <div class="text-xs text-slate-400 font-medium">Git Worktree Per Task</div>
+        </div>
+        <div class="p-3">
+          <div class="text-2xl font-bold font-mono text-accent-purple">Any CLI</div>
+          <div class="text-xs text-slate-400 font-medium">agy, codex, gemini...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Animated Terminal Mockup Visual -->
+    <div class="mt-16 max-w-5xl mx-auto relative rounded-2xl overflow-hidden border border-surface-border bg-surface-card shadow-2xl shadow-black/80">
+      
+      <!-- Terminal Header -->
+      <div class="bg-slate-900/90 px-4 py-3 border-b border-surface-border flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+          <span class="ml-2 font-mono text-xs text-slate-400">herdr-orchestration-session (w1X:t1)</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-500">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>HERDR_ENV=1</span>
+        </div>
+      </div>
+
+      <!-- Terminal Body Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 font-mono text-xs">
+        
+        <!-- Left: Claude Orchestrator Log (7 cols) -->
+        <div class="lg:col-span-7 p-5 bg-slate-950/90 border-b lg:border-b-0 lg:border-r border-surface-border space-y-3 leading-relaxed overflow-x-auto">
+          <div class="text-slate-500">// 1. Claude receives human request</div>
+          <div class="text-slate-200"><span class="text-brand-400 font-bold">orchestrator</span> <span class="text-emerald-400">❯</span> /herdr-dispatch "Tạo module auth_jwt.py kèm test unit test..."</div>
+          
+          <div class="text-slate-500 pt-2">// 2. Worktree isolation & Herdr Pane launch</div>
+          <div class="text-cyan-300">⚡ [Worktree] Created isolated branch: <span class="text-white">task/TASK-042</span></div>
+          <div class="text-cyan-300">⚡ [Herdr] Split pane right: <span class="text-white">w1X:p3</span> (cwd: .worktrees/TASK-042)</div>
+          <div class="text-cyan-300">⚡ [Herdr] Start agent <span class="text-amber-300">worker_agy_1</span> (--dangerously-skip-permissions)</div>
+
+          <div class="text-slate-500 pt-2">// 3. Task state tracking & Settled check</div>
+          <div class="text-slate-300">📋 Task state updated: <span class="text-emerald-400">TASK-042.json → status: working</span></div>
+          <div class="text-emerald-400">✔ Worker settled: idle (delivery confirmed via transcript)</div>
+
+          <div class="text-slate-500 pt-2">// 4. Enforced Diff-Based Review</div>
+          <div class="text-purple-300">🔍 [Reviewer] Inspecting git diff HEAD in .worktrees/TASK-042...</div>
+          <div class="text-emerald-300 font-semibold">✔ VERDICT: PASS (Tests passed: 5/5, JWT expiration check verified)</div>
+        </div>
+
+        <!-- Right: Real-time Pane Simulator (5 cols) -->
+        <div class="lg:col-span-5 p-5 bg-slate-900/60 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+              <span>Pane Preview: w1X:p3</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">agy (Claude Opus)</span>
+            </div>
+            <div class="bg-black/60 p-3 rounded-lg border border-white/5 space-y-2 text-slate-300 text-[11px]">
+              <div class="text-slate-400">&gt; Creating auth_jwt.py...</div>
+              <div class="text-emerald-400 font-mono">● Edit(.worktrees/TASK-042/auth_jwt.py)</div>
+              <div class="text-emerald-400 font-mono">● Bash(pytest test_auth.py) [5 passed]</div>
+              <div class="text-slate-500 text-[10px] mt-2">No approval prompt blocked execution. Settled clean.</div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-white/5">
+            <div class="text-[11px] text-slate-400 mb-2 flex justify-between">
+              <span>Task Ledger Status</span>
+              <span class="text-emerald-400 font-bold font-mono">STATE: PASSED</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-gradient-to-r from-brand-500 to-accent-cyan h-1.5 rounded-full w-full"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Section -->
+  <section id="architecture" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-surface-border/60 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-20">
+      <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Modular Architecture</h2>
+      <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+        How the 3-Layer Orchestration Works
+      </h3>
+      <p class="text-slate-400 text-base sm:text-lg">
+        Decouple cognitive orchestration from heavy execution. Every agent has a clear, non-overlapping responsibility.
+      </p>
+    </div>
+
+    <!-- 3-Layer Diagram Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+      
+      <!-- Layer 1: Orchestrator -->
+      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group">
+        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-brand-600 text-white font-mono text-[11px] font-bold tracking-wider uppercase">
+          Layer 1 • Brain
+        </div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+            <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white mb-2">Claude Code (Orchestrator)</h4>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            Reads the user goal, decomposes complex tasks into discrete jobs, prepares briefings, coordinates workers, and makes high-level decisions.
+          </p>
+        </div>
+        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Writes .agents/BRIEFING.md</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Manages Task State Machine</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Resumes work after restart</li>
+        </ul>
+      </div>
+
+      <!-- Layer 2: Herdr -->
+      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group border-accent-cyan/20">
+        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-accent-cyan text-slate-950 font-mono text-[11px] font-bold tracking-wider uppercase">
+          Layer 2 • Runtime
+        </div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+            <i data-lucide="layout-grid" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white mb-2">Herdr Terminal Multiplexer</h4>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            Maintains persistent terminal panes, process lifecycle tracking (idle / working / blocked / done), and exposes CLI/Socket automation.
+          </p>
+        </div>
+        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Live Pane Split &amp; Attachment</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Non-blocking status polling</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-cyan"></i> Native Plugin Actions &amp; Events</li>
+        </ul>
+      </div>
+
+      <!-- Layer 3: Workers & Reviewers -->
+      <div class="glass-card rounded-2xl p-7 relative flex flex-col justify-between group">
+        <div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-accent-purple text-white font-mono text-[11px] font-bold tracking-wider uppercase">
+          Layer 3 • Workers
+        </div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center mb-6 mt-2 group-hover:scale-110 transition">
+            <i data-lucide="bot" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white mb-2">Isolated Workers &amp; Reviewer</h4>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            <strong>agy, codex</strong>, or any CLI agent runs in isolated git worktrees. A dedicated <strong>reviewer</strong> evaluates actual git diffs, not self-reports.
+          </p>
+        </div>
+        <ul class="text-xs font-mono space-y-2 text-slate-300 border-t border-surface-border pt-4">
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> Git Worktree Isolated</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> 100% Skip Permissions Mode</li>
+          <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-accent-purple"></i> Diff-based verification gate</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Workflow Diagram Animation / Image -->
+    <div class="mt-16 glass-card p-4 sm:p-8 rounded-2xl max-w-4xl mx-auto border border-surface-border text-center">
+      <div class="text-xs font-mono text-slate-400 mb-4 flex items-center justify-center gap-2">
+        <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i>
+        <span>Workflow Diagram</span>
+      </div>
+      <img src="ai_coding_workflow_animated.gif" alt="AI Coding Workflow Animated" class="rounded-xl shadow-xl mx-auto w-full max-w-3xl border border-white/5">
+    </div>
+  </section>
+
+  <!-- Key Features Grid -->
+  <section id="features" class="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-surface-border/60 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-xs font-mono font-bold text-accent-cyan uppercase tracking-widest mb-3">Enterprise Grade</h2>
+      <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+        5 Pillars of Reliable Dispatch
+      </h3>
+      <p class="text-slate-400 text-base sm:text-lg">
+        Designed from empirical battle testing on real coding tasks. No blind trust, no race conditions, no unverified claims.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <!-- Feature 1 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-4">
+          <i data-lucide="cpu" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Universal Worker Engine</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Drive <code>agy</code>, <code>codex</code>, <code>gemini</code>, or any Herdr-supported kind through the exact same unified interface with per-kind native argument tuning.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan flex items-center justify-center mb-4">
+          <i data-lucide="database" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Stateful Task State Machine</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Every task is saved in <code>.agents/tasks/TASK-xxx.json</code>. If Claude restarts or compacts context, <code>herdr-resume</code> recovers active tasks automatically.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-accent-emerald/10 border border-accent-emerald/20 text-accent-emerald flex items-center justify-center mb-4">
+          <i data-lucide="git-fork" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Git Worktree Isolation</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Zero conflict during parallel execution. Workers modify isolated git worktrees on dedicated branches. Clean merge or cherry-pick upon verification.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center mb-4">
+          <i data-lucide="file-diff" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Diff-Enforced Review Policy</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Reviewers NEVER read or trust self-reported worker progress. Verdicts require inspecting real <code>git diff</code>, running test suites, and build checks.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-accent-amber/10 border border-accent-amber/20 text-accent-amber flex items-center justify-center mb-4">
+          <i data-lucide="shield-alert" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Stalled = UNKNOWN Protocol</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          <code>agent_prompt_stalled</code> is treated as UNKNOWN, not FAIL. Inspects pane transcripts for prompt delivery markers before attempting smart retries.
+        </p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="glass-card p-6 rounded-2xl transition">
+        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-4">
+          <i data-lucide="zap" class="w-5 h-5"></i>
+        </div>
+        <h4 class="text-lg font-bold text-white mb-2">Zero-Friction Execution</h4>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Automatically injects <code>--dangerously-skip-permissions</code> and <code>--add-dir</code> so workers never halt on interactive approval dialogues.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Installation Section -->
+  <section id="installation" class="py-24 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-surface-border/60 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-xs font-mono font-bold text-brand-400 uppercase tracking-widest mb-3">Quick Installation</h2>
+      <h3 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+        Install in Seconds
+      </h3>
+      <p class="text-slate-400 text-base">
+        Choose your environment: install as a Claude Code Plugin, natively in Herdr, or both.
+      </p>
+    </div>
+
+    <!-- Tabbed Code Box -->
+    <div class="glass-card rounded-2xl overflow-hidden border border-surface-border shadow-2xl">
+      
+      <!-- Tab Header -->
+      <div class="flex items-center justify-between border-b border-surface-border bg-slate-900/80 px-4 pt-3">
+        <div class="flex gap-2">
+          <button id="tab-claude" onclick="switchTab('claude')" 
+                  class="px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-surface-card text-white">
+            <i data-lucide="bot" class="w-4 h-4 text-brand-400"></i> Claude Code
+          </button>
+          <button id="tab-herdr" onclick="switchTab('herdr')" 
+                  class="px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white">
+            <i data-lucide="terminal" class="w-4 h-4 text-accent-cyan"></i> Herdr Native
+          </button>
+        </div>
+        <button onclick="copyCurrentCode()" class="flex items-center gap-1.5 px-3 py-1 text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span id="copy-btn-text">Copy</span>
+        </button>
+      </div>
+
+      <!-- Tab Content: Claude Code -->
+      <div id="content-claude" class="p-6 font-mono text-sm space-y-4 bg-slate-950/80">
+        <div class="text-slate-400 text-xs">// Run inside your Claude Code interactive session:</div>
+        <pre class="text-brand-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code id="code-claude">/plugin marketplace add https://github.com/anhnd3005-infinity/herdr-worker-orchestrator.git
+/plugin install herdr-worker-orchestrator@herdr-worker-orchestrator-marketplace</code></pre>
+        <div class="text-slate-500 text-xs pt-2">Works from any workspace on your machine. Public repo, no SSH keys needed.</div>
+      </div>
+
+      <!-- Tab Content: Herdr Native -->
+      <div id="content-herdr" class="p-6 font-mono text-sm space-y-4 bg-slate-950/80 hidden">
+        <div class="text-slate-400 text-xs">// Install directly using Herdr CLI:</div>
+        <pre class="text-cyan-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code id="code-herdr">herdr plugin install anhnd3005-infinity/herdr-worker-orchestrator</code></pre>
+        <div class="text-slate-400 text-xs pt-2">// Or link locally during development:</div>
+        <pre class="text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"><code>herdr plugin link /path/to/herdr-worker-orchestrator</code></pre>
+      </div>
+
+    </div>
+
+    <!-- Usage Prompt Showcase -->
+    <div class="mt-8 p-6 rounded-2xl glass-card border border-brand-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <div class="text-xs font-mono font-bold text-brand-400 uppercase tracking-wider mb-1">How to Trigger in Chat</div>
+        <div class="text-slate-200 text-sm font-mono">&gt; "Dùng agy làm worker tạo API RESTful bằng FastAPI trong workspace, test kỹ và báo cáo kết quả."</div>
+      </div>
+      <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator#how-to-use-it" target="_blank" class="text-xs font-mono text-accent-cyan hover:underline flex items-center gap-1 whitespace-nowrap">
+        View command docs <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </a>
+    </div>
+
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-surface-border/60 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-sm text-slate-500 relative z-10">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-brand-600/20 text-brand-400 flex items-center justify-center font-mono font-bold text-sm">⚡</div>
+        <span class="font-bold text-slate-300">herdr-worker-orchestrator</span>
+        <span class="text-xs font-mono text-slate-600">v0.5.0</span>
+      </div>
+      <div class="flex items-center gap-6 text-xs font-mono">
+        <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator" target="_blank" class="hover:text-slate-300 transition">GitHub</a>
+        <a href="https://herdr.dev" target="_blank" class="hover:text-slate-300 transition">Herdr.dev</a>
+        <a href="https://github.com/anhnd3005-infinity/herdr-worker-orchestrator/blob/main/LICENSE" target="_blank" class="hover:text-slate-300 transition">MIT License</a>
+      </div>
+    </div>
+    <div class="mt-8 text-center text-xs text-slate-600">
+      Built with precision for autonomous multi-agent development.
+    </div>
+  </footer>
+
+  <!-- Script for Tabs & Copy -->
+  <script>
+    lucide.createIcons();
+
+    let currentTab = 'claude';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const btnClaude = document.getElementById('tab-claude');
+      const btnHerdr = document.getElementById('tab-herdr');
+      const contentClaude = document.getElementById('content-claude');
+      const contentHerdr = document.getElementById('content-herdr');
+
+      if (tab === 'claude') {
+        btnClaude.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-brand-500 bg-surface-card text-white';
+        btnHerdr.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
+        contentClaude.classList.remove('hidden');
+        contentHerdr.classList.add('hidden');
+      } else {
+        btnHerdr.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-bold transition flex items-center gap-2 border-t-2 border-accent-cyan bg-surface-card text-white';
+        btnClaude.className = 'px-4 py-2.5 rounded-t-xl font-mono text-xs font-medium transition flex items-center gap-2 border-t-2 border-transparent text-slate-400 hover:text-white';
+        contentHerdr.classList.remove('hidden');
+        contentClaude.classList.add('hidden');
+      }
+    }
+
+    function copyCurrentCode() {
+      const codeElement = currentTab === 'claude' ? document.getElementById('code-claude') : document.getElementById('code-herdr');
+      const textToCopy = codeElement.innerText;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.innerText = 'Copied!';
+        setTimeout(() => {
+          btnText.innerText = 'Copy';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
